@@ -1,0 +1,108 @@
+{% extends 'core/base.html' %} 
+{% block title %}Mon profil{% endblock %} 
+{% block content %}
+
+<div class="mx-auto bg-white p-6 shadow rounded-lg mt-6">
+  <div id="section-profil" class="section-content p-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="bg-white rounded-xl shadow-lg p-8">
+        <div class="flex flex-col md:flex-row items-center md:justify-around space-x-6 mb-8 p-4">
+          <div
+            class="gradient-gold bg-amber-500 rounded-full flex items-center mb-6 justify-center"
+          >
+            <img
+              src="{{ profil.photo.url }}"
+              alt="Photo de profil"
+              class="h-20 w-20 md:h-[200px] md:w-[200px] rounded-full border"
+            />
+          </div>
+          <div class="text-center">
+            <h2 class="text-4xl font-bold">
+              {{ profil.user.username}} {{profil.user.first_name}}
+            </h2>
+            <p class="text-gray-600">{{ profil.user.email}}</p>
+            <p class="text-sm text-gray-500">{{ profil.role}}</p>
+          </div>
+        </div>
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+          {% csrf_token %}
+
+          <h3 class="text-lg font-bold mb-4">Profil</h3>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Nom</label
+              >
+              {{form.first_name}}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Post-Nom</label
+              >
+              {{form.last_name}}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Email</label
+              >
+              {{form.email}}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Téléphone</label
+              >
+              {{form.telephone}}
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Bio</label
+              >
+              {{form.bio}}
+            </div>
+            <div>
+              <label class="block text-gray-700 font-medium mb-2">Photo de profil</label>
+              {{ form.photo}}
+            </div>
+          </div>
+
+          <div class="border-t pt-6">
+            <h3 class="text-lg font-bold mb-4">Sécurité</h3>
+            <div class="grid md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Nouveau mot de passe</label
+                >
+                <input
+                  type="password"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Confirmer le mot de passe</label
+                >
+                <input
+                  type="password"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-6  md:justify-end md:space-x-4">
+            <button
+              type="submit"
+              class="px-6 py-2 gradient-gold text-black rounded-lg font-medium"
+            >
+              Sauvegarder
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

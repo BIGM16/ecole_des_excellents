@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}École des Excellents{% endblock %}</title>
+    {% load static %}
+    <link href="{% static 'css/output.css' %}" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              gold: "#FFD700",
+              "gold-dark": "#B8860B",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-gray-50 text-gray-900">
+    <!-- Navbar -->
+
+    <nav class="bg-black shadow-lg sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <div class="text-2xl font-bold text-yellow-300">EDE</div>
+            <!-- <div class="ml-3 text-white text-sm">École des Excellents</div> -->
+          </div>
+          {% if user.is_authenticated %}
+          <div class="hidden md:flex space-x-8 text-white">
+            <h2 class="text-yellow-300 font-medium">
+              Bonjour, {{ user.username }}
+            </h2>
+            <a href="/" class="hover:text-yellow-300 transition">Accueil</a>
+            <a
+              href="{% url 'profil' %}"
+              class="hover:text-yellow-300 transition"
+              >Profil</a
+            >
+            {% if user.profil.role == 'admin' %}
+            <a
+              href="{% url 'admin_dashboard' %}"
+              class="hover:text-yellow-300 transition"
+              >Espace Admin</a
+            >
+            {% elif user.profil.role == 'encadreur' %}
+            <a
+              href="{% url 'espace_encadreur' %}"
+              class="hover:text-yellow-300 transition"
+              >Espace Encadreur</a
+            >
+            {% elif user.profil.role == 'etudiant' %}
+            <a
+              href="{% url 'portail' %}"
+              class="hover:text-yellow-300 transition"
+              >Portail Étudiant</a
+            >
+            {% endif %}
+            <a
+              href="{% url 'contact' %}"
+              class="hover:text-yellow-300 transition"
+              >Contact</a
+            >
+            <a
+              href="{% url 'deconnexion' %}"
+              class="bg-red-500 px-3 py-1 rounded hover:bg-red-700 transition"
+            >
+              Déconnexion
+            </a>
+
+            {% else %}
+            <a
+              href="{% url 'connexion' %}"
+              class="hidden md:block bg-green-500 px-3 py-1 rounded hover:bg-green-700 transition"
+            >
+              Connexion
+            </a>
+
+            {% endif %}
+          </div>
+
+          <!-- Toucher cette partie du mobile -->
+          <button class="md:hidden text-white" onclick="toggleMenu()">
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <!-- Menu mobile -->
+      <div id="mobile-menu" class="hidden md:hidden bg-black">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+          {% if user.is_authenticated %}
+          <!-- class="block text-white hover:text-gold px-3 py-2 -->
+          <h2 class="text-yellow-300 font-medium px-3 py-2">
+            Bonjour, {{ user.username }}
+          </h2>
+          <a href="/" class="block text-white hover:text-gold px-3 py-2">Accueil</a>
+          <a href="{% url 'profil' %}" class="block text-white hover:text-gold px-3 py-2"
+            >Profil</a
+          >
+          {% if user.profil.role == 'admin' %}
+          <a
+            href="{% url 'admin_dashboard' %}"
+            class="block text-white hover:text-gold px-3 py-2"
+            >Espace Admin</a
+          >
+          {% elif user.profil.role == 'encadreur' %}
+          <a
+            href="{% url 'espace_encadreur' %}"
+            class="block text-white hover:text-gold px-3 py-2"
+            >Espace Encadreur</a
+          >
+          {% elif user.profil.role == 'etudiant' %}
+          <a href="{% url 'portail' %}" class="block text-white hover:text-gold px-3 py-2"
+            >Portail Étudiant</a
+          >
+          {% endif %}
+          <a href="{% url 'contact' %}" class="block text-white hover:text-gold px-3 py-2"
+            >Contact</a
+          >
+          <a
+            href="{% url 'deconnexion' %}"
+            class="block text-white text-center bg-red-500 px-3 py-2 rounded hover:bg-red-700 transition"
+          >
+            Déconnexion
+          </a>
+          {% else %}
+          <a
+            href="{% url 'connexion' %}"
+            class="bg-green-500 hover:bg-green-700 block text-white text-center px-3 py-2 rounded transition"
+          >
+            Connexion
+          </a>
+
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    {% block content %} {% endblock %}
+
+    <footer class="bg-gray-900 text-white py-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-yellow-300 mb-4">EDE</div>
+          <p class="text-gray-400 mb-4">
+            École des Excellents - Faculté de Médecine
+          </p>
+          <p class="text-sm text-gray-500">
+            © 2025 École des Excellents. Tous droits réservés.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+
+    {% load static %}
+    <script src="{% static 'script.js' %}"></script>
+  </body>
+</html>
