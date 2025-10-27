@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .models import Cours, Profil
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from .decorators import role_required
 from django.contrib.auth.models import User
-from .forms import UserProfilForm
+from .forms import UserProfilForm, UserUpdateForm, ProfilUpdateForm,ChangePasswordForm
 from django.db.models import Q
 from django.core.paginator import Paginator
 
@@ -77,17 +77,21 @@ def admin_dashboard(request):
 
     # --- Etudiants --- #
     etudiants = Profil.objects.select_related('user').filter(role='etudiant').order_by('user__last_name')
+    promotions = [ {'id': value, 'nom': label} for value, label in Profil.PROMOTION_CHOICES ]
 
-    promo_id = request.GET.get('promotion')
-    if promo_id and promo_id != 'all' :
-        etudiants = etudiants.filter(promotion_id=promo_id)
+    
+    promotion_filter = request.GET.get('promotion', 'All')
+    q = request.GET.get('q', '')
 
-    query = request.GET.get('q')
-    if query :
+    if promotion_filter and promotion_filter != 'all':
+        etudiants = etudiants.filter(promotion=promotion_filter)
+    if q:
         etudiants = etudiants.filter(
-            Q(profil__user__first_name__icontains=query)|
-            Q(profil__user__last_name__icontains=query)
+            Q(user__username__icontains=q) |
+            Q(user__email__icontains=q) |
+            Q(telephone__icontains=q)
         )
+    
     paginator = Paginator(etudiants, 10)
     page_numbers = request.GET.get('page')
     etudiants_page = paginator.get_page(page_numbers)
@@ -116,12 +120,55 @@ def admin_dashboard(request):
         'nb_encadreurs' : nb_encadreurs,
         'nb_etudiants' : nb_etudiants,
         'nb_cours' : nb_cours,
+        'promotion_choices': Profil.PROMOTION_CHOICES,
+        'q' : q,
+        'promotion_filter' : promotion_filter,
         'etudiants' : etudiants,
         'etudiants_page' : etudiants_page,
+        'promotions' : promotions,
         'form_etudiant' : form_etudiant,
         'cours_list' : courst_list,
         'section_active' : request.GET.get('section', 'etudiants')
     })
+
+
+@login_required(login_url='connexion')
+@role_required(allowed_roles=['admin'])
+def edit_etudiant(request, id):
+    profil = get_object_or_404(Profil, id=id)
+    user = profil.user
+
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=user)
+        profil_form = ProfilUpdateForm(request.POST, request.FILES, instance=profil)
+
+        if user_form.is_valid() and profil_form.is_valid():
+            user_form.save()
+            profil_form.save()
+            messages.success(request, "Les informations de l'étudiant ont été mises à jour.")
+            return redirect('admin_dashboard')
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
+    else:
+        user_form = UserUpdateForm(instance=user)
+        profil_form = ProfilUpdateForm(instance=profil)
+
+    return render(request, 'core/edit_etudiant.html', {
+        'user_form': user_form,
+        'profil_form': profil_form,
+        'profil': profil
+    })
+
+
+@login_required(login_url='connexion')
+@role_required(allowed_roles=['admin'])
+def delete_etudiant(request, id):
+    profil = get_object_or_404(Profil, id=id)
+    user = profil.user
+    user.delete()  # supprime user et profil (cascade)
+    messages.success(request, "Étudiant supprimé.")
+    return redirect('admin_dashboard')
+
 
 @login_required(login_url='connexion')
 @role_required(allowed_roles=['encadreur'])
@@ -131,17 +178,41 @@ def encadreur_dashboard(request):
 @login_required(login_url='connexion')
 def profil_view(request) :
     profil = request.user.profil
-    user = request.user
-    if request.method == 'POST' :
-        form = UserProfilForm(request.POST, request.FILES, instance=profil)
+    user = profil.user
 
-        if form.is_valid():
-            form.save()
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=user)
+        profil_form = ProfilUpdateForm(request.POST, request.FILES, instance=profil)
+
+        if user_form.is_valid() and profil_form.is_valid():
+            user_form.save()
+            profil_form.save()
+            messages.success(request, "Les informations de l'étudiant ont été mises à jour.")
             return redirect('profil')
-    else :
-        form = UserProfilForm(instance=profil)
-    context = {
-        'form' : form,
-        'profil' : profil
-    }
-    return render(request, 'core/profil.html', context)
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
+    else:
+        user_form = UserUpdateForm(instance=user)
+        profil_form = ProfilUpdateForm(instance=profil)
+
+    return render(request, 'core/profil.html', {
+        'user_form': user_form,
+        'profil_form': profil_form,
+        'profil': profil
+    })
+
+@login_required(login_url='connexion')
+def change_password(request):
+    if request.method == 'POST':
+        form = ChangePasswordForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # évite la déconnexion automatique
+            messages.success(request, "Votre mot de passe a été modifié avec succès.")
+            return redirect('profil')  # ou redirige où tu veux
+        else:
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+    else:
+        form = ChangePasswordForm(request.user)
+
+    return render(request, 'core/change_password.html', {'form': form})
