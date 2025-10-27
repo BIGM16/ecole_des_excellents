@@ -74,6 +74,8 @@ def admin_dashboard(request):
     #####################
     # ETUDIANTS SECTION #
     #####################
+    form_etudiant = UserProfilForm()
+    encadreur_form = UserProfilForm()
 
     etudiants = Profil.objects.select_related('user').filter(role='etudiant').order_by('user__username')
     paginator = Paginator(etudiants, 10)
@@ -83,36 +85,38 @@ def admin_dashboard(request):
     promotions = [{'id': value, 'nom': label} for value, label in Profil.PROMOTION_CHOICES]
 
     if request.method == 'POST':
-        form_etudiant = UserProfilForm(request.POST, request.FILES)
-        if form_etudiant.is_valid():
-            form_etudiant.save(request=request)
-            messages.success(request, "Étudiant ajouté et e-mail envoyé avec le lien de mot de passe.")
-            return redirect('admin_dashboard')
-        else:
-            messages.error(request, "Erreur dans le formulaire.")
-    else:
-        form_etudiant = UserProfilForm()
+        form_type = request.POST.get('form_type')
+        if form_type == 'etudiant':
+            form_etudiant = UserProfilForm(request.POST, request.FILES)
+            if form_etudiant.is_valid():
+                form_etudiant.save(request=request)
+                messages.success(request, "Étudiant ajouté et e-mail envoyé avec le lien de mot de passe.")
+                return redirect('admin_dashboard')
+            else:
+                messages.error(request, "Erreur dans le formulaire étudiant.")
+        elif form_type == 'encadreur':
+            encadreur_form = UserProfilForm(request.POST, request.FILES)
+            if encadreur_form.is_valid():
+                encadreur = encadreur_form.save(request=request)
+                encadreur.role = 'encadreur'
+                encadreur.save()
+                messages.success(request, "Encadreur ajouté avec succès !")
+                return redirect('admin_dashboard')
+            else:
+                messages.error(request, "Erreur dans le formulaire encadreur.")
+        
 
+    
 
     ######################
     # ENCADREURS SECTION #
     ######################
 
     encadreurs = Profil.objects.select_related('user').filter(role='encadreur').order_by('user__last_name')
-
-    if request.method == 'POST':
-        encadreur_form = UserProfilForm(request.POST, request.FILES)
-        if encadreur_form.is_valid() :
-            user = encadreur_form.save(commit=False)
-            user.username = user.email
-            user.save()
-            messages.success(request, "Encadreur ajouté avec succès !")
-            return redirect('admin_dashboard')
-        else:
-            messages.error(request, "Erreur dans le formulaire.")
-    else:
-        encadreur_form = UserProfilForm()
-
+    
+    paginator = Paginator(encadreurs, 10)
+    page_number = request.GET.get('page')
+    encadreurs_page = paginator.get_page(page_number)
 
 
     #################
@@ -128,9 +132,9 @@ def admin_dashboard(request):
         'nb_cours': nb_cours,
         'promotion_choices': Profil.PROMOTION_CHOICES,
         'etudiants': etudiants_page,  # on renvoie la page ici
-        'encadreurs': encadreurs,
+        'encadreurs': encadreurs_page,
         'promotions': promotions,
-        'form_etudiant': form_etudiant,
+        'form_etudiant' : form_etudiant,
         'encadreur_form' : encadreur_form,
         'cours_list': cours_list,
         'section_active': request.GET.get('section', 'etudiants'),

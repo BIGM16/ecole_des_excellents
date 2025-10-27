@@ -1,5 +1,5 @@
 {% extends 'core/base.html' %} 
-{% block title %}Espace Admin{% endblock %} 
+{% block title %} Espace Admin {% endblock %}
 {% block content %}
 <!-- Dashboard Section -->
 
@@ -38,7 +38,7 @@
 <!-- =================================== -->
 <!--  SECTION1 : SECTION TABLEAU DE BORD -->
 <!-- =================================== -->
- 
+
 <section id="statistque" class="tab-section hidden p-6">
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
@@ -204,35 +204,34 @@
   <!-- Filters -->
   <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
     <form method="get" class="grid md:grid-cols-2 gap-4">
-  <div>
-    <label class="block text-sm font-medium text-gray-700 mb-2">
-      Promotion
-    </label>
-    <select
-      name="promotion"
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-    >
-      <option value="all" selected>Toutes les promotions</option>
-      {% for value, label in promotion_choices %}
-        <option value="{{ value }}">{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Promotion
+        </label>
+        <select
+          name="promotion"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+        >
+          <option value="all" selected>Toutes les promotions</option>
+          {% for value, label in promotion_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-  <div>
-    <label class="block text-sm font-medium text-gray-700 mb-2">
-      Recherche
-    </label>
-    <input
-      type="text"
-      name="q"
-      id="search-input"
-      placeholder="Nom, email..."
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-    />
-  </div>
-</form>
-
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Recherche
+        </label>
+        <input
+          type="text"
+          name="q"
+          id="search-input"
+          placeholder="Nom, email..."
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+        />
+      </div>
+    </form>
   </div>
 
   <!-- Étudiants Table -->
@@ -255,7 +254,11 @@
           >
             Telephone
           </th>
-          <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+          <th
+            class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+          >
+            Actions
+          </th>
         </tr>
       </thead>
       <tbody id="etudiantsBody" class="divide-y divide-gray-200">
@@ -267,14 +270,14 @@
                 class="bg-green-100 rounded-full flex items-center justify-center"
               >
                 <img
-                  src="{% if e.photo and e.photo.url %}{{ e.photo.url }}{% else %}{{ MEDIA_URL }}default.png{% endif %}"
+                  src="{% if e.photo and e.photo.url %} {{ e.photo.url }} {% else %} {{ MEDIA_URL }}default.png {% endif %}"
                   alt="Photo de profil"
                   class="h-20 w-20 rounded-full border"
                 />
               </div>
               <div>
-                <div class="font-medium">{{ e.user.username}}</div>
-                <div class="text-sm text-gray-500">{{e.user.email}}</div>
+                <div class="font-medium">{{ e.user.username }}</div>
+                <div class="text-sm text-gray-500">{{e.user.email }}</div>
               </div>
             </div>
           </td>
@@ -284,8 +287,17 @@
           </td>
           <td class="text-center">
             <div class="flex justify-center space-x-2">
-              <a href="{% url 'edit_etudiant' e.id %}" class="text-blue-600 hover:underline">Modifier</a>
-              <a href="{% url 'delete_etudiant' e.id %}" class="text-red-600 hover:underline" onclick="return confirm('Supprimer cet étudiant ?')">Supprimer</a>
+              <a
+                href="{% url 'edit_etudiant' e.id %}"
+                class="text-blue-600 hover:underline"
+                >Modifier</a
+              >
+              <a
+                href="{% url 'delete_etudiant' e.id %}"
+                class="text-red-600 hover:underline"
+                onclick="return confirm('Supprimer cet étudiant ?')"
+                >Supprimer</a
+              >
             </div>
           </td>
         </tr>
@@ -302,7 +314,7 @@
     <a
       href="?page={{ etudiants.previous_page_number }}"
       class="px-3 py-1 bg-gray-200 rounded"
-      >&laquo; Précédent</a
+      >Précédent</a
     >
     {% endif %}
     <span class="px-4"
@@ -312,7 +324,7 @@
     <a
       href="?page={{ etudiants.next_page_number }}"
       class="px-3 py-1 bg-gray-200 rounded"
-      >Suivant &raquo;</a
+      >Suivant</a
     >
     {% endif %}
   </div>
@@ -330,29 +342,33 @@
           ✕
         </button>
       </div>
-      <form method="POST" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 bg-gray-50 p-4 rounded">
-        {% csrf_token %}{{ form_etudiant.as_p }}
+      <form
+        method="POST"
+        enctype="multipart/form-data"
+        class="grid grid-cols-2 gap-2 bg-gray-50 p-4 rounded"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="etudiant">
+        {{ form_etudiant.as_p }}
         <div class="flex justify-end space-x-4 mt-10">
-        <button
-          type="button"
-          onclick="closeModal('etudiantModal')"
-          class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          Annuler
-        </button>
-        <button
-          type="submit"
-          class="px-4 py-2 gradient-gold text-black rounded-lg font-medium"
-        >
-          Ajouter l'Étudiant
-        </button>
-      </div>
-        
+          <button
+            type="button"
+            onclick="closeModal('etudiantModal')"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 gradient-gold text-black rounded-lg font-medium"
+          >
+            Ajouter l'Étudiant
+          </button>
+        </div>
       </form>
     </div>
   </div>
 </section>
-
 
 <!-- =================================== -->
 <!--     SECTION3 : SECTION ENCADREURS   -->
@@ -361,215 +377,156 @@
 <!-- Encadreurs Section -->
 <section id="encadreurs" class="tab-section p-6 hidden">
   <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Gestion des Encadreurs</h2>
-          <button
-            onclick="openModal('encadreurModal')"
-            class="gradient-gold text-black px-4 py-2 rounded-lg font-medium"
-          >
-            ➕ Ajouter un Encadreur
-          </button>
-        </div>
-
-        <!-- Encadreurs Grid -->
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-            <div class="flex items-center space-x-4 mb-4">
-              <div
-                class="w-16 h-16 gradient-gold rounded-full flex items-center justify-center"
-              >
-                <span class="text-black font-bold text-xl">DA</span>
-              </div>
-              <div>
-                <h3 class="font-bold text-lg">Dr. Ahmed ANATOMIE</h3>
-                <p class="text-gray-600 text-sm">Encadreur Anatomie</p>
-              </div>
-            </div>
-            <div class="space-y-2 text-sm">
-              <p>
-                <span class="font-medium">Email:</span> ahmed@ede-medecine.edu
-              </p>
-              <p><span class="font-medium">Spécialité:</span> Anatomie</p>
-              <p><span class="font-medium">Expérience:</span> 15 ans</p>
-              <p><span class="font-medium">Cours:</span> 12 actifs</p>
-            </div>
-            <div class="flex justify-between items-center mt-4">
-              <span
-                class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full"
-                >Actif</span
-              >
-              <div class="flex space-x-2">
-                <button class="text-blue-600 hover:text-blue-800">✏️</button>
-                <button class="text-red-600 hover:text-red-800">🗑️</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-            <div class="flex items-center space-x-4 mb-4">
-              <div
-                class="w-16 h-16 gradient-gold rounded-full flex items-center justify-center"
-              >
-                <span class="text-black font-bold text-xl">LP</span>
-              </div>
-              <div>
-                <h3 class="font-bold text-lg">Prof. Leila PHYSIOLOGIE</h3>
-                <p class="text-gray-600 text-sm">Encadreur Physiologie</p>
-              </div>
-            </div>
-            <div class="space-y-2 text-sm">
-              <p>
-                <span class="font-medium">Email:</span> leila@ede-medecine.edu
-              </p>
-              <p><span class="font-medium">Spécialité:</span> Physiologie</p>
-              <p><span class="font-medium">Expérience:</span> 12 ans</p>
-              <p><span class="font-medium">Cours:</span> 8 actifs</p>
-            </div>
-            <div class="flex justify-between items-center mt-4">
-              <span
-                class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full"
-                >Actif</span
-              >
-              <div class="flex space-x-2">
-                <button class="text-blue-600 hover:text-blue-800">✏️</button>
-                <button class="text-red-600 hover:text-red-800">🗑️</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-            <div class="flex items-center space-x-4 mb-4">
-              <div
-                class="w-16 h-16 gradient-gold rounded-full flex items-center justify-center"
-              >
-                <span class="text-black font-bold text-xl">SP</span>
-              </div>
-              <div>
-                <h3 class="font-bold text-lg">Dr. Sarah PATHOLOGIE</h3>
-                <p class="text-gray-600 text-sm">Encadreur Pathologie</p>
-              </div>
-            </div>
-            <div class="space-y-2 text-sm">
-              <p>
-                <span class="font-medium">Email:</span> sarah@ede-medecine.edu
-              </p>
-              <p><span class="font-medium">Spécialité:</span> Pathologie</p>
-              <p><span class="font-medium">Expérience:</span> 10 ans</p>
-              <p><span class="font-medium">Cours:</span> 6 actifs</p>
-            </div>
-            <div class="flex justify-between items-center mt-4">
-              <span
-                class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full"
-                >En congé</span
-              >
-              <div class="flex space-x-2">
-                <button class="text-blue-600 hover:text-blue-800">✏️</button>
-                <button class="text-red-600 hover:text-red-800">🗑️</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-      id="encadreurModal"
-      class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50"
+    <h2 class="text-2xl font-bold">Gestion des Encadreurs</h2>
+    <button
+      onclick="openModal('encadreurModal')"
+      class="gradient-gold text-black px-4 py-2 rounded-lg font-medium"
     >
-      <div class="bg-white rounded-xl p-8 max-w-2xl w-full mx-4">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold">Ajouter un Nouvel Encadreur</h3>
-          <button
-            onclick="closeModal('encadreurModal')"
-            class="text-gray-500 hover:text-gray-700"
+      ➕ Ajouter un Encadreur
+    </button>
+  </div>
+
+  <!-- Encadreurs Grid -->
+  <div class="bg-white rounded-xl shadow-lg overflow-x-auto">
+    <table id="etudiantsTable" class="w-full min-w-max">
+      <thead class="bg-gray-50">
+        <tr>
+          <th
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
           >
-            ✕
+            Encadreurs
+          </th>
+          <th
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+          >
+            Promotion
+          </th>
+          <th
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+          >
+            Telephone
+          </th>
+          <th
+            class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+          >
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody id="etudiantsBody" class="divide-y divide-gray-200">
+        {% for en in encadreurs %}
+        <tr>
+          <td class="px-6 py-4">
+            <div class="flex items-center space-x-3">
+              <div
+                class="bg-green-100 rounded-full flex items-center justify-center"
+              >
+                <img
+                  src="{% if en.photo and en.photo.url %}{{ en.photo.url }}{% else %}{{ MEDIA_URL }}default.png{% endif %}"
+                  alt="Photo de profil"
+                  class="h-20 w-20 rounded-full border"
+                />
+              </div>
+              <div>
+                <div class="font-medium">{{ en.user.username }}</div>
+                <div class="text-sm text-gray-500">{{ en.user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ en.get_promotion_display }}</td>
+          <td>
+            <span class="text-lg font-bold text-red-600">{{ en.telephone }}</span>
+          </td>
+          <td class="text-center">
+            <div class="flex justify-center space-x-2">
+              <a
+                href="{% url 'edit_etudiant' en.id %}"
+                class="text-blue-600 hover:underline"
+                >Modifier</a
+              >
+              <a
+                href="{% url 'delete_etudiant' en.id %}"
+                class="text-red-600 hover:underline"
+                onclick="return confirm('Supprimer cet encadreur ?')"
+                >Supprimer</a
+              >
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4">Aucun encadreur</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="flex justify-center mt-4">
+    {% if encadreurs.has_previous %}
+    <a
+      href="?page={{ encadreurs.previous_page_number }}"
+      class="px-3 py-1 bg-gray-200 rounded"
+      >Précédent</a
+    >
+    {% endif %}
+    <span class="px-4"
+      >Page {{ encadreurs.number }} / {{ encadreurs.paginator.num_pages }}</span
+    >
+    {% if encadreurs.has_next %}
+    <a
+      href="?page={{ encadreurs.next_page_number }}"
+      class="px-3 py-1 bg-gray-200 rounded"
+      >Suivant</a
+    >
+    {% endif %}
+  </div>
+
+  <div
+    id="encadreurModal"
+    class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50"
+  >
+    <div class="bg-white rounded-xl p-8 max-w-2xl w-full mx-4">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold">Ajouter un Nouvel Encadreur</h3>
+        <button
+          onclick="closeModal('encadreurModal')"
+          class="text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
+      </div>
+      <form
+        method="POST"
+        enctype="multipart/form-data"
+        class="grid grid-cols-2 gap-2 bg-gray-50 p-4 rounded"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="encadreur">
+        {{ encadreur_form.as_p }}
+        <div class="flex justify-end space-x-4 mt-10">
+          <button
+            type="button"
+            onclick="closeModal('encadreurModal')"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 gradient-gold text-black rounded-lg font-medium"
+          >
+            Ajouter l'Encadreur
           </button>
         </div>
-        <form onsubmit="addEncadreur(event)">
-          <div class="grid md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Nom complet</label
-              >
-              <input
-                type="text"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Email</label
-              >
-              <input
-                type="email"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div class="grid md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Spécialité</label
-              >
-              <select
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
-              >
-                <option value="">Sélectionner...</option>
-                <option>Anatomie</option>
-                <option>Physiologie</option>
-                <option>Pathologie</option>
-                <option>Pharmacologie</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Années d'expérience</label
-              >
-              <input
-                type="number"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2"
-              >Téléphone</label
-            >
-            <input
-              type="tel"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
-            />
-          </div>
-          <div class="flex justify-end space-x-4">
-            <button
-              type="button"
-              onclick="closeModal('encadreurModal')"
-              class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 gradient-gold text-black rounded-lg font-medium"
-            >
-              Ajouter l'Encadreur
-            </button>
-          </div>
-        </form>
-      </div>
+      </form>
     </div>
+  </div>
 </section>
 
 
-
-
-
-
-
-
-
+<!-- ============================= -->
+<!--    SECTION3 : COURS ET PDFS   -->
+<!-- ============================= -->
 
 
 <script>
@@ -599,29 +556,33 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-  const searchInput = document.getElementById("search-input");
-  const promotionSelect = document.querySelector("select[name='promotion']");
-  const etudiantsBody = document.getElementById("etudiantsBody");
+    const searchInput = document.getElementById("search-input");
+    const promotionSelect = document.querySelector("select[name='promotion']");
+    const etudiantsBody = document.getElementById("etudiantsBody");
 
-  if (!searchInput || !promotionSelect || !etudiantsBody) return;
+    if (!searchInput || !promotionSelect || !etudiantsBody) return;
 
-  // Fonction de recherche/filtrage combinée
-  function updateEtudiants() {
-    const query = searchInput.value.trim();
-    const promotion = promotionSelect.value;
+    // Fonction de recherche/filtrage combinée
+    function updateEtudiants() {
+      const query = searchInput.value.trim();
+      const promotion = promotionSelect.value;
 
-    fetch(`/etudiant/search/?q=${encodeURIComponent(query)}&promotion=${encodeURIComponent(promotion)}`)
-      .then(response => response.json())
-      .then(data => {
-        etudiantsBody.innerHTML = "";
+      fetch(
+        `/etudiant/search/?q=${encodeURIComponent(
+          query
+        )}&promotion=${encodeURIComponent(promotion)}`
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          etudiantsBody.innerHTML = "";
 
-        if (data.results.length === 0) {
-          etudiantsBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">Aucun étudiant trouvé</td></tr>`;
-          return;
-        }
+          if (data.results.length === 0) {
+            etudiantsBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">Aucun étudiant trouvé</td></tr>`;
+            return;
+          }
 
-        data.results.forEach(e => {
-          const row = `
+          data.results.forEach((e) => {
+            const row = `
             <tr>
               <td class="px-6 py-4">
                 <div class="flex items-center space-x-3">
@@ -643,19 +604,16 @@
                 </div>
               </td>
             </tr>`;
-          etudiantsBody.insertAdjacentHTML("beforeend", row);
-        });
-      })
-      .catch(err => console.error("Erreur recherche :", err));
-  }
+            etudiantsBody.insertAdjacentHTML("beforeend", row);
+          });
+        })
+        .catch((err) => console.error("Erreur recherche :", err));
+    }
 
-  // Événements : recherche + filtrage
-  searchInput.addEventListener("keyup", updateEtudiants);
-  promotionSelect.addEventListener("change", updateEtudiants);
-});
-
-
+    // Événements : recherche + filtrage
+    searchInput.addEventListener("keyup", updateEtudiants);
+    promotionSelect.addEventListener("change", updateEtudiants);
+  });
 </script>
-
 
 {% endblock %}

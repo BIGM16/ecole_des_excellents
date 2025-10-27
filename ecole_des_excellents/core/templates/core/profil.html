@@ -6,7 +6,9 @@
   <div id="section-profil" class="section-content p-6">
     <div class="max-w-4xl mx-auto">
       <div class="bg-white rounded-xl shadow-lg p-8">
-        <div class="flex flex-col md:flex-row items-center md:justify-around space-x-6 mb-8 p-4">
+        <div
+          class="flex flex-col md:flex-row items-center md:justify-around space-x-6 mb-8 p-4"
+        >
           <div
             class="gradient-gold bg-amber-500 rounded-full flex items-center mb-6 justify-center"
           >
@@ -21,13 +23,13 @@
               {{ profil.user.username}} {{profil.user.first_name}}
             </h2>
             <p class="text-gray-600">{{ profil.user.email}}</p>
-            <p class="text-sm text-gray-500 capitalize">{{ profil.role}} en {{ profil.get_promotion_display }}</p>
+            <p class="text-sm text-gray-500 capitalize">
+              {{ profil.role}} en {{ profil.get_promotion_display }}
+            </p>
           </div>
         </div>
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
-          {% csrf_token %}
-          {{ user_form.as_p }}
-          {{ profil_form.as_p }}
+          {% csrf_token %} {{ user_form.as_p }} {{ profil_form.as_p }}
 
           <!-- <div class="border-t pt-6">
             <h3 class="text-lg font-bold mb-4">Sécurité</h3>
@@ -53,7 +55,7 @@
             </div>
           </div> -->
 
-          <div class="flex flex-col gap-6  md:justify-end md:space-x-4">
+          <div class="flex flex-col gap-6 md:justify-end md:space-x-4">
             <button
               type="submit"
               class="px-6 py-2 gradient-gold text-black rounded-lg font-medium"
@@ -63,7 +65,10 @@
             <button
               class="py-2 gradient-gold text-black rounded-lg font-medium"
             >
-              <a href="{% url 'change_password' %}" class="block w-full hover:underline">
+              <a
+                href="{% url 'change_password' %}"
+                class="block w-full hover:underline"
+              >
                 Changer mon mot de passe
               </a>
             </button>
