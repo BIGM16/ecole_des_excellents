@@ -3,6 +3,7 @@ from .models import Cours, Profil
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.http import JsonResponse
 from .decorators import role_required
 from django.contrib.auth.models import User
 from .forms import UserProfilForm, UserUpdateForm, ProfilUpdateForm,ChangePasswordForm
@@ -43,9 +44,6 @@ def connexion_utilisateur(request):
                 return redirect('encadreur_dashboard')
             elif profil.role == 'etudiant' :
                 return redirect('portail')
-            # redirige vers next (si présent) ou vers portail
-            # next_url = request.POST.get('next') or request.GET.get('next') or 'portail'
-            # return redirect(next_url)
         else:
             messages.error(request, "Email/username ou mot de passe incorrect")
 
@@ -69,34 +67,17 @@ def portail(request):
 @login_required(login_url='connexion')
 @role_required(allowed_roles=['admin'])
 def admin_dashboard(request):
-    # --- Tableau de bords --- #
     nb_encadreurs = User.objects.filter(profil__role='encadreur').count()
     nb_etudiants = User.objects.filter(profil__role='etudiant').count()
     nb_cours = Cours.objects.count()
 
-
-    # --- Etudiants --- #
-    etudiants = Profil.objects.select_related('user').filter(role='etudiant').order_by('user__last_name')
-    promotions = [ {'id': value, 'nom': label} for value, label in Profil.PROMOTION_CHOICES ]
-
-    
-    promotion_filter = request.GET.get('promotion', 'All')
-    q = request.GET.get('q', '')
-
-    if promotion_filter and promotion_filter != 'all':
-        etudiants = etudiants.filter(promotion=promotion_filter)
-    if q:
-        etudiants = etudiants.filter(
-            Q(user__username__icontains=q) |
-            Q(user__email__icontains=q) |
-            Q(telephone__icontains=q)
-        )
-    
+    etudiants = Profil.objects.select_related('user').filter(role='etudiant').order_by('user__username')
     paginator = Paginator(etudiants, 10)
-    page_numbers = request.GET.get('page')
-    etudiants_page = paginator.get_page(page_numbers)
+    page_number = request.GET.get('page')
+    etudiants_page = paginator.get_page(page_number)
 
-    form_etudiant = UserProfilForm()
+    promotions = [{'id': value, 'nom': label} for value, label in Profil.PROMOTION_CHOICES]
+
     if request.method == 'POST':
         form_etudiant = UserProfilForm(request.POST, request.FILES)
         if form_etudiant.is_valid():
@@ -104,32 +85,24 @@ def admin_dashboard(request):
             messages.success(request, "Étudiant ajouté et e-mail envoyé avec le lien de mot de passe.")
             return redirect('admin_dashboard')
         else:
-            messages.error(request, 'Erreur dans le formulaire.')
-
+            messages.error(request, "Erreur dans le formulaire.")
     else:
-        form_etudiant=UserProfilForm()
+        form_etudiant = UserProfilForm()
 
-    # -- Encadreurs ( à compéter plus tard) -- #
+    cours_list = Cours.objects.select_related('encadreur').all().order_by('-date_creation')
 
-    
-    # --- Cours ( à compléter plus tard) --- #
-    courst_list = Cours.objects.select_related('encadreur').all().order_by('-date_creation')
-    
-    
     return render(request, 'core/admin_dashboard.html', {
-        'nb_encadreurs' : nb_encadreurs,
-        'nb_etudiants' : nb_etudiants,
-        'nb_cours' : nb_cours,
+        'nb_encadreurs': nb_encadreurs,
+        'nb_etudiants': nb_etudiants,
+        'nb_cours': nb_cours,
         'promotion_choices': Profil.PROMOTION_CHOICES,
-        'q' : q,
-        'promotion_filter' : promotion_filter,
-        'etudiants' : etudiants,
-        'etudiants_page' : etudiants_page,
-        'promotions' : promotions,
-        'form_etudiant' : form_etudiant,
-        'cours_list' : courst_list,
-        'section_active' : request.GET.get('section', 'etudiants')
+        'etudiants': etudiants_page,  # on renvoie la page ici
+        'promotions': promotions,
+        'form_etudiant': form_etudiant,
+        'cours_list': cours_list,
+        'section_active': request.GET.get('section', 'etudiants'),
     })
+
 
 
 @login_required(login_url='connexion')
@@ -158,6 +131,37 @@ def edit_etudiant(request, id):
         'profil_form': profil_form,
         'profil': profil
     })
+
+@login_required(login_url='connexion')
+@role_required(allowed_roles=['admin'])
+def search_etudiant(request):
+    q = request.GET.get('q', '').strip()
+    promotion_filter = request.GET.get('promotion', 'all')
+
+    etudiants = Profil.objects.select_related('user').filter(role='etudiant')
+
+    if promotion_filter != 'all':
+        etudiants = etudiants.filter(promotion=promotion_filter)
+    if q:
+        etudiants = etudiants.filter(
+            Q(user__username__icontains=q) |
+            Q(user__email__icontains=q) |
+            Q(telephone__icontains=q)
+        )
+
+    results = []
+    for e in etudiants:
+        photo_url = e.photo.url if e.photo else '/media/default.png'
+        results.append({
+            'id': e.id,
+            'nom': e.user.username,
+            'email': e.user.email,
+            'promotion': e.get_promotion_display(),
+            'telephone': e.telephone,
+            'photo': photo_url,
+        })
+
+    return JsonResponse({'results': results})
 
 
 @login_required(login_url='connexion')
