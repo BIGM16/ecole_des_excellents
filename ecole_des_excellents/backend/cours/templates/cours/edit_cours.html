@@ -1,0 +1,366 @@
+{% extends 'core/base.html' %}
+{% block title %}Modifier le cours{% endblock %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto mt-8 p-6 bg-white rounded-lg shadow">
+  <h2 class="text-2xl font-bold mb-4">Modifier : {{ cours.titre }}</h2>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+    <div>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="mb-4">
+          {{ form.titre.label_tag }} {{ form.titre }}
+          {% for e in form.titre.errors %}
+          <p class="text-red-600 text-sm">{{ e }}</p>
+          {% endfor %}
+        </div>
+        <div class="mb-4">
+          {{ form.promotion.label_tag }} {{ form.promotion }}
+          {% for e in form.promotion.errors %}
+          <p class="text-red-600 text-sm">{{ e }}</p>
+          {% endfor %}
+        </div>
+        <div class="mb-4">
+          {{ form.description.label_tag }} {{ form.description }}
+          {% for e in form.description.errors %}
+          <p class="text-red-600 text-sm">{{ e }}</p>
+          {% endfor %}
+        </div>
+        <div class="mb-4">
+          {{ form.encadreur.label_tag }} {{ form.encadreur }}
+          {% for e in form.encadreur.errors %}
+          <p class="text-red-600 text-sm">{{ e }}</p>
+          {% endfor %}
+        </div>
+        <div class="flex justify-end">
+          <button
+            type="submit"
+            class="px-4 py-2 gradient-gold text-black rounded-lg"
+          >
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div>
+      <h3 class="text-lg font-bold mb-3">Documents</h3>
+      <div id="documentsList" class="space-y-3 mb-4">
+        {% for d in documents %}
+        <div class="p-3 bg-gray-50 rounded document-block">
+          <div class="flex justify-between items-center">
+            <div>
+              <div class="font-medium">{{ d.titre }}</div>
+              <div class="text-sm text-gray-600">
+                {{ d.get_categorie_display }} —
+                <span class="files-count">{{ d.fichiers.count }}</span> fichiers
+              </div>
+            </div>
+            <div class="text-sm text-gray-500">
+              {{ d.date_ajout|date:'d/m/Y H:i' }}
+            </div>
+          </div>
+          <ul
+            class="mt-2 text-sm text-gray-700 list-disc list-inside fichiers-list"
+          >
+            {% for f in d.fichiers.all %}
+            <li data-file-id="{{ f.id }}">
+              <a
+                href="{{ f.fichier.url }}"
+                target="_blank"
+                class="text-blue-600 hover:underline"
+                >{{ f.nom }}</a
+              >
+              <button
+                type="button"
+                class="ml-2 text-red-600 delete-file-btn"
+                data-file-id="{{ f.id }}"
+              >
+                Supprimer
+              </button>
+            </li>
+            {% empty %}
+            <li class="text-gray-500">Aucun fichier</li>
+            {% endfor %}
+          </ul>
+
+          <div class="mt-3">
+            <form
+              class="add-files-form"
+              data-add-url="{% url 'cours:ajouter_fichiers_document' d.id %}"
+              enctype="multipart/form-data"
+            >
+              {% csrf_token %}
+              <label class="block text-sm mb-1">Ajouter des fichiers</label>
+              <input
+                type="file"
+                name="fichiers[]"
+                multiple
+                accept=".pdf,.doc,.docx,.ppt,.pptx"
+                class="add-files-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
+              />
+              <button
+                type="submit"
+                class="px-3 py-1 mt-2 gradient-gold text-black rounded-lg"
+              >
+                Uploader
+              </button>
+              <span class="text-sm text-gray-600 ml-3 add-files-status"></span>
+            </form>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-gray-500">Aucun document pour ce cours</p>
+        {% endfor %}
+      </div>
+
+      <h4 class="text-md font-semibold mb-2">Ajouter un document</h4>
+      <form id="ajaxDocForm" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-2">
+          {{ doc_form.titre.label_tag }} {{ doc_form.titre }}
+        </div>
+        <div class="mb-2">
+          {{ doc_form.categorie.label_tag }} {{ doc_form.categorie }}
+        </div>
+        <div class="mb-2">
+          <label for="id_files">Fichiers (plusieurs)</label>
+          <input
+            type="file"
+            id="id_files"
+            name="fichiers[]"
+            multiple
+            accept=".pdf,.doc,.docx,.ppt,.pptx"
+            class="w-full"
+          />
+        </div>
+
+        <div id="ajaxProgress" class="hidden mb-2">
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              id="ajaxBar"
+              class="bg-green-600 h-2.5 rounded-full"
+              style="width: 0%"
+            ></div>
+          </div>
+          <p id="ajaxText" class="text-sm text-gray-600 mt-1">0%</p>
+        </div>
+
+        <div id="ajaxStatus" class="text-sm text-gray-700 mb-2"></div>
+
+        <div class="flex justify-end">
+          <button
+            type="submit"
+            class="px-3 py-2 gradient-gold text-black rounded-lg"
+          >
+            Ajouter Document
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("ajaxDocForm");
+    const filesInput = document.getElementById("id_files");
+    const progress = document.getElementById("ajaxProgress");
+    const bar = document.getElementById("ajaxBar");
+    const text = document.getElementById("ajaxText");
+    const status = document.getElementById("ajaxStatus");
+    const docsList = document.getElementById("documentsList");
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData();
+      fd.append(
+        "titre",
+        document.querySelector('#ajaxDocForm input[name="titre"]').value
+      );
+      fd.append(
+        "categorie",
+        document.querySelector('#ajaxDocForm select[name="categorie"]').value
+      );
+      for (const f of filesInput.files) fd.append("fichiers[]", f);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", '{% url "cours:ajouter_document" cours.id %}');
+      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+      xhr.setRequestHeader(
+        "X-CSRFToken",
+        document.querySelector("[name=csrfmiddlewaretoken]").value
+      );
+
+      progress.classList.remove("hidden");
+      status.textContent = "Upload en cours...";
+
+      xhr.upload.addEventListener("progress", (ev) => {
+        if (ev.lengthComputable) {
+          const pct = Math.round((ev.loaded / ev.total) * 100);
+          bar.style.width = pct + "%";
+          text.textContent = pct + "%";
+        }
+      });
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const res = JSON.parse(xhr.responseText);
+          if (res.success) {
+            status.innerHTML =
+              '<span class="text-green-600">Document ajouté</span>';
+            // prepend new document block
+            const d = res.document;
+            const files = res.files;
+            const block = document.createElement("div");
+            block.className = "p-3 bg-gray-50 rounded document-block";
+            let html = `<div class="flex justify-between items-center"><div><div class="font-medium">${d.titre}</div><div class="text-sm text-gray-600">${d.categorie} — <span class="files-count">${files.length}</span> fichiers</div></div><div class="text-sm text-gray-500">Maintenant</div></div>`;
+            html += `<ul class="mt-2 text-sm text-gray-700 list-disc list-inside fichiers-list">`;
+            files.forEach(
+              (f) =>
+                (html += `<li data-file-id="${f.id}"><a href="#" class="text-blue-600 hover:underline">${f.name}</a> <button type="button" class="ml-2 text-red-600 delete-file-btn" data-file-id="${f.id}">Supprimer</button></li>`)
+            );
+            html += `</ul>`;
+            // add-files form (with csrf token)
+            const csrfVal = document.querySelector(
+              "[name=csrfmiddlewaretoken]"
+            ).value;
+            html += `<div class="mt-3"><form class="add-files-form" enctype="multipart/form-data"><input type="hidden" name="csrfmiddlewaretoken" value="${csrfVal}"><label class="block text-sm mb-1">Ajouter des fichiers</label><input type="file" name="fichiers[]" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" class="add-files-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"><button type="submit" class="px-3 py-1 mt-2 gradient-gold text-black rounded-lg">Uploader</button><span class="text-sm text-gray-600 ml-3 add-files-status"></span></form></div>`;
+            block.innerHTML = html;
+            // set the add-url for the new form
+            const addForm = block.querySelector(".add-files-form");
+            if (addForm)
+              addForm.dataset.addUrl =
+                '{% url "cours:ajouter_fichiers_document" 0 %}'.replace(
+                  "/0/",
+                  `/${d.id}/`
+                );
+            docsList.prepend(block);
+            // reset form
+            form.reset();
+            bar.style.width = "0%";
+            text.textContent = "0%";
+            progress.classList.add("hidden");
+          } else {
+            status.innerHTML =
+              '<span class="text-red-600">' +
+              (res.error || "Erreur") +
+              "</span>";
+          }
+        } else {
+          status.innerHTML = '<span class="text-red-600">Erreur serveur</span>';
+        }
+      };
+
+      xhr.onerror = () => {
+        status.innerHTML = '<span class="text-red-600">Erreur réseau</span>';
+      };
+      xhr.send(fd);
+    });
+  });
+</script>
+
+<script>
+  // Handlers for adding files to existing documents and deleting files
+  document.addEventListener("DOMContentLoaded", () => {
+    // Add files to document
+    document.querySelectorAll(".add-files-form").forEach((form) => {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = form.querySelector(".add-files-input");
+        const status = form.querySelector(".add-files-status");
+        const url = form.dataset.addUrl;
+        const fd = new FormData();
+        for (const f of input.files) fd.append("fichiers[]", f);
+        const csrf = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+        status.textContent = "Upload en cours...";
+
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": csrf,
+          },
+          body: fd,
+        })
+          .then((r) => r.json())
+          .then((res) => {
+            if (res.success) {
+              status.innerHTML =
+                '<span class="text-green-600">Fichiers ajoutés</span>';
+              const docBlock = form.closest(".document-block");
+              const list = docBlock.querySelector(".fichiers-list");
+              const countSpan = docBlock.querySelector(".files-count");
+              res.files.forEach((f) => {
+                const li = document.createElement("li");
+                li.setAttribute("data-file-id", f.id);
+                li.innerHTML = `<a href="${f.url}" target="_blank" class="text-blue-600 hover:underline">${f.name}</a> <button type="button" class="ml-2 text-red-600 delete-file-btn" data-file-id="${f.id}">Supprimer</button>`;
+                list.appendChild(li);
+              });
+              if (countSpan)
+                countSpan.textContent = list.querySelectorAll("li").length;
+              form.reset();
+            } else {
+              status.innerHTML =
+                '<span class="text-red-600">' +
+                (res.error || "Erreur") +
+                "</span>";
+            }
+          })
+          .catch((err) => {
+            status.innerHTML =
+              '<span class="text-red-600">Erreur réseau</span>';
+            console.error(err);
+          });
+      });
+    });
+
+    // Delete file buttons (delegation)
+    document.addEventListener("click", (e) => {
+      if (!e.target.classList.contains("delete-file-btn")) return;
+      const fileId = e.target.dataset.fileId;
+      const csrf = document.querySelector("[name=csrfmiddlewaretoken]").value;
+      if (!confirm("Supprimer ce fichier ?")) return;
+
+      fetch(
+        `{% url 'cours:supprimer_document_file' 0 %}`.replace(
+          "/0/",
+          `/${fileId}/`
+        ),
+        {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": csrf,
+          },
+        }
+      )
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.success) {
+            const li = document.querySelector(`li[data-file-id="${fileId}"]`);
+            if (li) li.remove();
+            // update count if present
+            const docBlock = e.target.closest(".document-block");
+            if (docBlock) {
+              const countSpan = docBlock.querySelector(".files-count");
+              const list = docBlock.querySelector(".fichiers-list");
+              if (countSpan && list)
+                countSpan.textContent = list.querySelectorAll("li").length;
+            }
+          } else {
+            alert(res.error || "Impossible de supprimer");
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Erreur réseau");
+        });
+    });
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'core/base.html' %}
+{% block title %}Mon profil{% endblock %}
+{% block content %}
+
+<div class="mx-auto  bg-white md:p-6 shadow rounded-lg md:mt-6">
+  <div id="section-profil" class="section-content  md:p-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="bg-white rounded-xl shadow-lg p-8">
+        <div
+          class="flex flex-col md:flex-row items-center md:justify-around space-x-6 mb-8 p-4"
+        >
+          <div
+            class="gradient-gold bg-amber-500 rounded-full flex items-center mb-6 justify-center"
+          >
+            <img
+              src="{{ profil.photo.url }}"
+              alt="Photo de profil"
+              class="h-24 w-24 md:h-[200px] md:w-[200px] rounded-full border"
+            />
+          </div>
+          <div class="text-center">
+            <h2 class="text-4xl font-bold">
+              {{ profil.user.username}} {{profil.user.first_name}}
+            </h2>
+            <p class="text-gray-600">{{ profil.user.email}}</p>
+            <p class="text-sm text-gray-500 capitalize">
+              {{ profil.role}} en {{ profil.get_promotion_display }}
+            </p>
+          </div>
+        </div>
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+          {% csrf_token %}
+          {{ user_form.as_p }}
+          {{ profil_form.as_p }}
+          <div class="flex flex-col gap-6 md:justify-end md:space-x-4">
+            <button
+              type="submit"
+              class="px-6 py-2 gradient-gold text-black rounded-lg font-medium"
+            >
+              Sauvegarder
+            </button>
+            <button
+              class="py-2 gradient-gold text-black rounded-lg font-medium"
+            >
+              <a
+                href="{% url 'users:change_password' %}"
+                class="block w-full hover:underline"
+              >
+                Changer mon mot de passe
+              </a>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

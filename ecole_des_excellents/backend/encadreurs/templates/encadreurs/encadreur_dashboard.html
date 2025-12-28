@@ -1,0 +1,20 @@
+{% extends 'core/base.html' %}
+{% block title %}Contact – École des Excellents {% endblock %}
+{% block content %}
+
+    <header class="bg-blue-700 text-white text-center py-6">
+        <h1 class="text-3xl font-bold">Nos Encadreurs</h1>
+    </header>
+
+    <main class="p-6 grid md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-6">
+        {% for encadreur in encadreurs %}
+        <div class="bg-white shadow-lg rounded-lg p-5 border">
+            <h2 class="text-xl font-semibold text-blue-700">{{ encadreur.nom }}</h2>
+            <p class="text-gray-600 italic">{{ encadreur.specialite }}</p>
+            <p class="mt-3 text-gray-800">{{ encadreur.bio }}</p>
+        </div>
+        {% empty %}
+        <p class="text-center text-gray-600">Aucun encadreur enregistré pour le moment.</p>
+        {% endfor %}
+    </main>
+{% endblock %}

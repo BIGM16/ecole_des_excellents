@@ -1,0 +1,132 @@
+{% extends 'core/base.html' %} {% block title %}Dashboard Coordinateur{%
+endblock %} {% block content %}
+<div class="max-w-5xl mx-auto mt-8 p-6 bg-white rounded-lg shadow">
+  <h2 class="text-2xl font-bold mb-4">
+    Dashboard Coordinateur — Promotion {{ promotion }}
+  </h2>
+
+  <div class="grid md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-gray-50 p-4 rounded">
+      <h3 class="font-semibold mb-2">Étudiants ({{ etudiants.count }})</h3>
+      <ul class="space-y-2">
+        {% for e in etudiants %}
+        <li class="text-sm">
+          {{ e.user.get_full_name|default:e.user.username }} — {{ e.user.email
+          }}
+        </li>
+        {% empty %}
+        <li class="text-sm text-gray-500">Aucun étudiant</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="bg-gray-50 p-4 rounded">
+      <h3 class="font-semibold mb-2">Cours ({{ cours.count }})</h3>
+      <ul class="space-y-2">
+        {% for c in cours %}
+        <li class="text-sm">{{ c.titre }} — {{ c.get_promotion_display }}</li>
+        {% empty %}
+        <li class="text-sm text-gray-500">Aucun cours</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="bg-gray-50 p-4 rounded">
+      <h3 class="font-semibold mb-2">Créer un horaire</h3>
+      <form
+        id="horaireForm"
+        method="post"
+        action="{% url 'coordinateurs:create_horaire_ajax' %}"
+      >
+        {% csrf_token %}
+        <div class="mb-2">
+          <label class="block text-sm">Titre</label>
+          <input
+            name="titre"
+            class="w-full px-2 py-1 border rounded"
+            required
+          />
+        </div>
+        <div class="mb-2">
+          <label class="block text-sm">Cours (optionnel)</label>
+          <select name="cours" class="w-full px-2 py-1 border rounded">
+            <option value="">— Aucun —</option>
+            {% for c in cours %}
+            <option value="{{ c.id }}">{{ c.titre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="block text-sm">Date et heure (ISO)</label>
+          <input
+            name="date_debut"
+            type="datetime-local"
+            class="w-full px-2 py-1 border rounded"
+            required
+          />
+        </div>
+        <div class="mb-2">
+          <label class="block text-sm">Lieu</label>
+          <input name="lieu" class="w-full px-2 py-1 border rounded" />
+        </div>
+        <div class="flex justify-end">
+          <button
+            type="submit"
+            class="px-3 py-1 gradient-gold text-black rounded"
+          >
+            Créer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="bg-white rounded p-4">
+    <h3 class="font-semibold mb-3">Horaires à venir</h3>
+    <ul class="space-y-2">
+      {% for h in horaires %}
+      <li class="border p-3 rounded">
+        <div class="font-medium">{{ h.titre }}</div>
+        <div class="text-sm text-gray-600">
+          {{ h.date_debut }}{% if h.lieu %} — {{ h.lieu }}{% endif %}
+        </div>
+        <div class="text-sm mt-1">{{ h.description }}</div>
+      </li>
+      {% empty %}
+      <li class="text-sm text-gray-500">Aucun horaire</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("horaireForm");
+    if (!form) return;
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const csrf = document.querySelector("[name=csrfmiddlewaretoken]").value;
+      fetch(form.action, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf, "X-Requested-With": "XMLHttpRequest" },
+        body: fd,
+      })
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.success) {
+            alert("Horaire créé");
+            location.reload();
+          } else {
+            alert(res.error || "Erreur");
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Erreur réseau");
+        });
+    });
+  });
+</script>
+
+{% endblock %}
