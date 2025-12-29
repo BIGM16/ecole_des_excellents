@@ -1,17 +1,46 @@
-"use client"
+"use client";
 
-import { EtudiantDashboardStats } from "@/components/etudiant/etudiant-dashboard-stats"
-import { EtudiantHoraireWidget } from "@/components/etudiant/etudiant-horaire-widget"
-import { EtudiantCoordonWidget } from "@/components/etudiant/etudiant-coordon-widget"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Users } from "lucide-react"
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { EtudiantDashboardStats } from "@/components/etudiant/etudiant-dashboard-stats";
+import { EtudiantHoraireWidget } from "@/components/etudiant/etudiant-horaire-widget";
+import { EtudiantCoordonWidget } from "@/components/etudiant/etudiant-coordon-widget";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Calendar, Users } from "lucide-react";
 
 export default function EtudiantDashboard() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== "etudiant")) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Chargement...
+      </div>
+    );
+  if (!user || user.role !== "etudiant") return null;
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       <div>
-        <h1 className="text-3xl font-bold text-foreground font-serif">Tableau de Bord</h1>
-        <p className="text-muted-foreground mt-1">Bienvenue sur votre espace étudiant</p>
+        <h1 className="text-3xl font-bold text-foreground font-serif">
+          Tableau de Bord
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Bienvenue sur votre espace étudiant
+        </p>
       </div>
 
       <EtudiantDashboardStats />
@@ -25,7 +54,9 @@ export default function EtudiantDashboard() {
               </div>
               <div>
                 <CardTitle>Horaire de la Semaine</CardTitle>
-                <CardDescription>Emploi du temps de votre promotion</CardDescription>
+                <CardDescription>
+                  Emploi du temps de votre promotion
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -52,5 +83,5 @@ export default function EtudiantDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

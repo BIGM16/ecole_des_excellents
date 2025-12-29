@@ -102,6 +102,9 @@ def connexion_utilisateur(request):
 				return JsonResponse({'success': False, 'error': 'Email/username ou mot de passe incorrect'}, status=400)
 			messages.error(request, "Email/username ou mot de passe incorrect")
 
+	# Pour GET ou échec d'auth, afficher le template
+	return render(request, 'users/connexion.html', {'next': request.GET.get('next', '')})
+
 
 
 @ensure_csrf_cookie
@@ -112,7 +115,7 @@ def csrf_token(request):
 
 
 # transmet la valeur next au template si fournie
-return render(request, 'users/connexion.html', {'next': request.GET.get('next', '')})
+# return render(request, 'users/connexion.html', {'next': request.GET.get('next', '')})
 
 
 def deconnexion(request):

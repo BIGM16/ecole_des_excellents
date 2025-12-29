@@ -8,4 +8,5 @@ urlpatterns = [
     path('contact/', views.contact, name='contact'),
     path('portail/', views.portail, name='portail'),
     path('app/', views.react_app, name='react'),
+    path('api/auth/me/', views.auth_me, name='auth_me'),
 ]

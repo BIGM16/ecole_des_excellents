@@ -9,50 +9,33 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Lock, Mail, Eye, EyeOff, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 export function LoginForm() {
   const router = useRouter();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
   });
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
-
-      // Request JWT tokens from backend
-      const res = await fetch(`${API_BASE}/api/token/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.access) {
-        // store access token in cookie so Next middleware can read it
-        const maxAge = 60 * 30; // 30 minutes
-        document.cookie = `accessToken=${data.access}; path=/; max-age=${maxAge}`;
-        if (data.refresh) localStorage.setItem("refreshToken", data.refresh);
-
-        // backend provides role/redirect via custom serializer
-        const redirectTo = data.redirect || "/";
-        router.push(redirectTo);
+      const success = await login(formData.username, formData.password);
+      if (success) {
+        router.push("/");
       } else {
-        alert(data.detail || data.error || "Identifiants invalides");
+        setError("Identifiants invalides");
       }
     } catch (err) {
       console.error(err);
-      alert("Erreur réseau lors de la connexion");
+      setError("Erreur réseau lors de la connexion");
     } finally {
       setIsLoading(false);
     }
@@ -103,23 +86,28 @@ export function LoginForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email/Username Input */}
+            {error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+            {/* Username Input */}
             <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-500 delay-300">
               <Label
-                htmlFor="email"
+                htmlFor="username"
                 className="text-sm font-medium text-foreground"
               >
-                Nom d'utilisateur ou Email
+                Nom d'utilisateur
               </Label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                 <Input
-                  id="email"
+                  id="username"
                   type="text"
-                  placeholder="votre.email@exemple.com"
-                  value={formData.email}
+                  placeholder="votre_nom_utilisateur"
+                  value={formData.username}
                   onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
+                    setFormData({ ...formData, username: e.target.value })
                   }
                   className="pl-10 h-12 bg-background border-border focus:border-primary transition-all duration-200"
                   required

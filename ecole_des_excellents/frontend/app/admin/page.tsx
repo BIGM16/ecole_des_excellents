@@ -1,20 +1,49 @@
-"use client"
+"use client";
 
-import { AdminDashboardStats } from "@/components/admin/admin-dashboard-stats"
-import { AdminCharts } from "@/components/admin/admin-charts"
-import { RecentActivities } from "@/components/admin/recent-activities"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Users } from "lucide-react"
-import { AdminHoraireWidget } from "@/components/admin/admin-horaire-widget"
-import { AdminCoordonWidget } from "@/components/admin/admin-coordon-widget"
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { AdminDashboardStats } from "@/components/admin/admin-dashboard-stats";
+import { AdminCharts } from "@/components/admin/admin-charts";
+import { RecentActivities } from "@/components/admin/recent-activities";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Calendar, Users } from "lucide-react";
+import { AdminHoraireWidget } from "@/components/admin/admin-horaire-widget";
+import { AdminCoordonWidget } from "@/components/admin/admin-coordon-widget";
 
 export default function AdminDashboardPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== "admin")) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Chargement...
+      </div>
+    );
+  if (!user || user.role !== "admin") return null;
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-foreground mb-2 font-serif">Tableau de Bord</h1>
-        <p className="text-muted-foreground">Vue d'ensemble de l'École des Excellents</p>
+        <h1 className="text-4xl font-bold text-foreground mb-2 font-serif">
+          Tableau de Bord
+        </h1>
+        <p className="text-muted-foreground">
+          Vue d'ensemble de l'École des Excellents
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -29,7 +58,9 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <CardTitle>Mon Horaire</CardTitle>
-                <CardDescription>Emploi du temps de ma promotion</CardDescription>
+                <CardDescription>
+                  Emploi du temps de ma promotion
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -62,5 +93,5 @@ export default function AdminDashboardPage() {
       {/* Recent Activities */}
       <RecentActivities />
     </div>
-  )
+  );
 }

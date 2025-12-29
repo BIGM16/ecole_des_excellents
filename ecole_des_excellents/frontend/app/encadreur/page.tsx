@@ -1,17 +1,46 @@
-"use client"
+"use client";
 
-import { EncadreurDashboardStats } from "@/components/encadreur/encadreur-dashboard-stats"
-import { EncadreurHoraireWidget } from "@/components/encadreur/encadreur-horaire-widget"
-import { EncadreurCoordonWidget } from "@/components/encadreur/encadreur-coordon-widget"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, Users } from "lucide-react"
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { EncadreurDashboardStats } from "@/components/encadreur/encadreur-dashboard-stats";
+import { EncadreurHoraireWidget } from "@/components/encadreur/encadreur-horaire-widget";
+import { EncadreurCoordonWidget } from "@/components/encadreur/encadreur-coordon-widget";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { BookOpen, Users } from "lucide-react";
 
 export default function EncadreurDashboard() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== "encadreur")) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Chargement...
+      </div>
+    );
+  if (!user || user.role !== "encadreur") return null;
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       <div>
-        <h1 className="text-3xl font-bold text-foreground font-serif">Tableau de Bord</h1>
-        <p className="text-muted-foreground mt-1">Bienvenue sur votre espace encadreur</p>
+        <h1 className="text-3xl font-bold text-foreground font-serif">
+          Tableau de Bord
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Bienvenue sur votre espace encadreur
+        </p>
       </div>
 
       <EncadreurDashboardStats />
@@ -52,5 +81,5 @@ export default function EncadreurDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

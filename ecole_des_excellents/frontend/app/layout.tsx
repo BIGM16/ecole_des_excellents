@@ -1,23 +1,25 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Cormorant_Garamond, Inter } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
-import "./globals.css"
+import type React from "react";
+import type { Metadata } from "next";
+import { Cormorant_Garamond, Inter } from "next/font/google";
+// import { Analytics } from "@vercel/analytics/next"
+import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 const cormorant = Cormorant_Garamond({
   weight: ["300", "400", "600", "700"],
   subsets: ["latin"],
   variable: "--font-serif",
-})
+});
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
-})
+});
 
 export const metadata: Metadata = {
   title: "École des Excellents - EDE | Faculté de Médecine",
-  description: "Structure d'étude universitaire d'excellence de la Faculté de Médecine",
+  description:
+    "Structure d'étude universitaire d'excellence de la Faculté de Médecine",
   generator: "v0.app",
   icons: {
     icon: [
@@ -36,19 +38,21 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="fr">
-      <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}>
-        {children}
-        <Analytics />
+      <body
+        className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}
+      >
+        <AuthProvider>{children}</AuthProvider>
+        {/* <Analytics /> */}
       </body>
     </html>
-  )
+  );
 }
