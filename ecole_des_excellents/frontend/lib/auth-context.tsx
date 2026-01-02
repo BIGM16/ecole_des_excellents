@@ -7,6 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { fetchWithAuth } from "@/lib/api";
 
 interface User {
   id: number;
@@ -42,7 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async (token: string) => {
     try {
-      const response = await fetch("http://localhost:8000/api/auth/me/", {
+      const API_BASE =
+        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+      const response = await fetchWithAuth(`${API_BASE}/api/auth/me/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -66,22 +69,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string
   ): Promise<boolean> => {
     try {
-      const response = await fetch("http://localhost:8000/api/auth/login/", {
+      const API_BASE =
+        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+      const response = await fetchWithAuth(`${API_BASE}/api/token/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
       if (response.ok) {
         const data = await response.json();
         const token = data.access;
-        localStorage.setItem("token", token);
+        const refresh = data.refresh;
+        // store access token for client API calls
+        localStorage.setItem("access", token);
+        if (refresh) localStorage.setItem("refresh", refresh);
+        // also set cookie for Next middleware
+        const maxAge = 60 * 30; // 30 minutes
+        if (typeof document !== "undefined") {
+          document.cookie = `accessToken=${token}; path=/; max-age=${maxAge}`;
+        }
         await fetchUser(token);
         return true;
-      } else {
-        return false;
       }
+      return false;
     } catch (error) {
       console.error("Erreur lors de la connexion:", error);
       return false;

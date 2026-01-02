@@ -12,6 +12,11 @@ from users.forms import UserUpdateForm, ProfilUpdateForm, ChangePasswordForm
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.conf import settings
 
 UserModel = get_user_model()
 
@@ -55,6 +60,91 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class MyTokenObtainPairView(TokenObtainPairView):
 	serializer_class = MyTokenObtainPairSerializer
+
+
+class CookieTokenObtainPairView(MyTokenObtainPairView):
+	"""Return tokens and set them as HttpOnly cookies on the response."""
+	def post(self, request, *args, **kwargs):
+		response = super().post(request, *args, **kwargs)
+		# response is a DRF Response containing access and refresh on success
+		if response.status_code == status.HTTP_200_OK:
+			data = getattr(response, 'data', {}) or {}
+			access = data.get('access')
+			refresh = data.get('refresh')
+			# cookie lifetimes (seconds) — tune as needed or derive from settings
+			access_max_age = getattr(settings, 'JWT_ACCESS_COOKIE_AGE', 60 * 30)
+			refresh_max_age = getattr(settings, 'JWT_REFRESH_COOKIE_AGE', 60 * 60 * 24 * 7)
+
+			# set HttpOnly cookies
+			if access:
+				response.set_cookie(
+					key='accessToken',
+					value=access,
+					max_age=access_max_age,
+					httponly=True,
+					secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
+					samesite=getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax'),
+					path='/'
+				)
+			if refresh:
+				response.set_cookie(
+					key='refreshToken',
+					value=refresh,
+					max_age=refresh_max_age,
+					httponly=True,
+					secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
+					samesite=getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax'),
+					path='/'
+				)
+		return response
+
+
+class CookieTokenRefreshView(TokenRefreshView):
+	"""Refresh view that sets a new access token cookie when refresh is valid."""
+	def post(self, request, *args, **kwargs):
+		response = super().post(request, *args, **kwargs)
+		if response.status_code == status.HTTP_200_OK:
+			data = getattr(response, 'data', {}) or {}
+			access = data.get('access')
+			access_max_age = getattr(settings, 'JWT_ACCESS_COOKIE_AGE', 60 * 30)
+			if access:
+				response.set_cookie(
+					key='accessToken',
+					value=access,
+					max_age=access_max_age,
+					httponly=True,
+					secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
+					samesite=getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax'),
+					path='/'
+				)
+		return response
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+	"""Retourne les informations du user courant (protégé par JWT)."""
+	user = request.user
+	try:
+		profil = Profil.objects.get(user=user)
+		data = {
+			'id': user.id,
+			'username': user.username,
+			'email': user.email,
+			'role': profil.role,
+			'nom_complet': f"{user.first_name} {user.last_name}".strip(),
+			'promotion': profil.promotion,
+			'photo': profil.photo.url if profil.photo else None,
+		}
+	except Profil.DoesNotExist:
+		data = {
+			'id': user.id,
+			'username': user.username,
+			'email': user.email,
+			'role': None,
+		}
+
+	return Response(data)
 
 
 def connexion_utilisateur(request):

@@ -35,13 +35,13 @@ const coordinationTeam = [
   {
     icon: Users,
     title: "Coordination Principale",
-    name: "Dr. Marie KABALA",
+    name: "Dr. Heritier NSINDU",
     email: "coordination.principale@ede.edu",
   },
   {
     icon: Building2,
-    title: "Coordination Académique",
-    name: "Pr. Jean-Paul MUTOMBO",
+    title: "Coordination Principal Adjoint",
+    name: "Pr. Big M",
     email: "coordination.academique@ede.edu",
   },
   {

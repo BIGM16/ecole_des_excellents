@@ -31,7 +31,7 @@ export function LoginPageClient() {
   }, [user, loading, router]);
 
   if (loading) {
-    return <div>Chargement...</div>;
+    return <div className="h-full flex bg-background align-center jusitify-center text-center text-3xl">Chargement...</div>;
   }
 
   return (
