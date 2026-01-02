@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { fetchWithAuth } from "@/lib/api";
+import { useToast } from "@/lib/toast-context";
 
 interface User {
   id: number;
@@ -31,6 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const API_BASE =
         process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-      const response = await fetchWithAuth(`${API_BASE}/api/auth/me/`, {
+      const response = await fetch(`${API_BASE}/api/auth/me/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -53,14 +54,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+      } else if (response.status === 401) {
+        // Token expiré, essayer refresh
+        await refreshToken();
       } else {
-        localStorage.removeItem("token");
+        localStorage.clear();
+        setUser(null);
+        addToast("error", "Session expirée. Veuillez vous reconnecter.");
       }
     } catch (error) {
       console.error("Erreur lors de la récupération de l'utilisateur:", error);
-      localStorage.removeItem("token");
+      localStorage.clear();
+      setUser(null);
+      addToast("error", "Erreur de connexion. Veuillez réessayer.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshToken = async () => {
+    const refresh = localStorage.getItem("refreshToken");
+    if (!refresh) {
+      localStorage.clear();
+      setUser(null);
+      return;
+    }
+
+    try {
+      const API_BASE =
+        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+      const response = await fetch(`${API_BASE}/api/auth/refresh/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("token", data.access);
+        await fetchUser(data.access);
+      } else {
+        localStorage.clear();
+        setUser(null);
+        addToast("warning", "Session expirée. Veuillez vous reconnecter.");
+      }
+    } catch (error) {
+      console.error("Erreur lors du refresh:", error);
+      localStorage.clear();
+      setUser(null);
+      addToast("error", "Erreur lors du renouvellement de session.");
     }
   };
 
@@ -71,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const API_BASE =
         process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-      const response = await fetchWithAuth(`${API_BASE}/api/token/`, {
+      const response = await fetch(`${API_BASE}/api/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -80,27 +122,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         const token = data.access;
         const refresh = data.refresh;
-        // store access token for client API calls
-        localStorage.setItem("access", token);
-        if (refresh) localStorage.setItem("refresh", refresh);
-        // also set cookie for Next middleware
-        const maxAge = 60 * 30; // 30 minutes
-        if (typeof document !== "undefined") {
-          document.cookie = `accessToken=${token}; path=/; max-age=${maxAge}`;
-        }
+        localStorage.setItem("token", token);
+        if (refresh) localStorage.setItem("refreshToken", refresh);
         await fetchUser(token);
+        addToast("success", "Connexion réussie ! Bienvenue.");
         return true;
       }
+      addToast(
+        "error",
+        "Identifiants incorrects. Vérifiez votre nom d'utilisateur et mot de passe."
+      );
       return false;
     } catch (error) {
       console.error("Erreur lors de la connexion:", error);
+      addToast("error", "Erreur de réseau. Vérifiez votre connexion internet.");
       return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    localStorage.clear();
     setUser(null);
+    addToast("info", "Vous avez été déconnecté.");
+    window.location.href = "/";
   };
 
   return (

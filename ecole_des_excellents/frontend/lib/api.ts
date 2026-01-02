@@ -1,53 +1,98 @@
-const API_URL = "http://localhost:8000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
-function processQueue(error: any, token: string |null = null) {
-    failedQueue.forEach(prom => {
-        if (error) {
-            prom.reject(error);
-        }else {
-            prom.resolve(token);
-        }
-    });
-    failedQueue = [];
+function processQueue(error: any, token: string | null = null) {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
 }
 
 export async function fetchWithAuth(
-    endpoint:string,
-    options: RequestInit = {}
+  endpoint: string,
+  options: RequestInit = {}
 ) {
-    const access = localStorage.getItem("access");
+  const access = localStorage.getItem("token");
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers: {
-            ...(options.headers || {}),
-            Authorization: access ? `Bearer ${access}` : "",
-            "Content-Type": "application/json",
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: access ? `Bearer ${access}` : "",
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  const refresh = localStorage.getItem("refreshToken");
+  if (!refresh) {
+    throw new Error("No refresh token");
+  }
+
+  if (isRefreshing) {
+    return new Promise((resolve, reject) => {
+      failedQueue.push({
+        resolve: (token: string) => {
+          resolve(
+            fetch(`${API_URL}${endpoint}`, {
+              ...options,
+              headers: {
+                ...options.headers,
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            })
+          );
         },
+        reject,
+      });
+    });
+  }
+
+  isRefreshing = true;
+
+  try {
+    const refreshResponse = await fetch(`${API_URL}/api/auth/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
     });
 
-    if (response.status !== 401){
-        return response;
+    if (!refreshResponse.ok) {
+      throw new Error("Refresh failed");
     }
 
-    const refresh = localStorage.getItem("refresh");
-    if (!refresh) {
-        throw new Error("No refresh token");
-    }
+    const data = await refreshResponse.json();
+    localStorage.setItem("token", data.access);
 
-    if (isRefreshing) {
-        return new Promise((resolve, rejet) =>{
-            failedQueue.push({
-                resolve: (token: string) =>{
-                    resolve(
-                        fetchWithAuth(endpoint, {
-                            ...options,
-                            headers: {
-                                ...options.headers,
-                                Authorization: `Bearer ${token}`,
+    processQueue(null, data.access);
+    isRefreshing = false;
+
+    return fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${data.access}`,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    processQueue(error, null);
+    isRefreshing = false;
+    localStorage.clear();
+    window.location.href = "/login";
+    throw error;
+  }
+}
                             },
                         })
                     );
@@ -57,31 +102,41 @@ export async function fetchWithAuth(
         });
     }
 
-    isRefreshing= True;
+    });
+  }
 
-    try{
-        const refreshResponse = await fetch(`${API_URL}/auth/refresh/`, {
-            method : "POST",
-            headers : {"Content-Type" : "application/json"},
-            body : JSON.stringify({ refresh }),
-        });
+  isRefreshing = true;
 
-        if(!refreshResponse.ok) {
-            throw new Error("Refresh failed");
-        }
+  try {
+    const refreshResponse = await fetch(`${API_URL}/api/auth/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
 
-        const data = await refreshResponse.json();
-        localStorage.setItem("access", data.access);
-
-        processQueue(null, data.access);
-        isRefreshing = false;
-
-        return fetchWithAuth(endpoint, options);
-    } catch (error) {
-        processQueue(error, null);
-        isRefreshing = false;
-        localStorage.clear();
-        window.location.href="/login";
-        throw error;
+    if (!refreshResponse.ok) {
+      throw new Error("Refresh failed");
     }
+
+    const data = await refreshResponse.json();
+    localStorage.setItem("token", data.access);
+
+    processQueue(null, data.access);
+    isRefreshing = false;
+
+    return fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${data.access}`,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    processQueue(error, null);
+    isRefreshing = false;
+    localStorage.clear();
+    window.location.href = "/login";
+    throw error;
+  }
 }

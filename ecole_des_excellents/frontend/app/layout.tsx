@@ -4,7 +4,8 @@ import { Cormorant_Garamond, Inter } from "next/font/google";
 // import { Analytics } from "@vercel/analytics/next"
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
-
+import { ToastProvider } from "@/lib/toast-context";
+import { ToastContainer } from "@/components/toast-container";
 const cormorant = Cormorant_Garamond({
   weight: ["300", "400", "600", "700"],
   subsets: ["latin"],
@@ -50,7 +51,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            {children}
+            <ToastContainer />
+          </AuthProvider>
+        </ToastProvider>
         {/* <Analytics /> */}
       </body>
     </html>
