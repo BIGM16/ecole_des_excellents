@@ -27,9 +27,9 @@ export function LoginForm() {
     setIsLoading(true);
     setError("");
     try {
-      const success = await login(formData.username, formData.password);
-      if (success) {
-        router.push("/");
+      const redirect = await login(formData.username, formData.password);
+      if (redirect) {
+        router.push(redirect);
       } else {
         setError("Identifiants invalides");
       }

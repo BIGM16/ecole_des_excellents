@@ -10,6 +10,16 @@ from django.middleware.csrf import get_token
 from core.models import Profil
 from users.forms import UserUpdateForm, ProfilUpdateForm, ChangePasswordForm
 
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.backends import TokenBackend
+from django.contrib.auth import get_user_model
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.conf import settings
+
 UserModel = get_user_model()
 
 
@@ -113,10 +123,33 @@ class CookieTokenRefreshView(TokenRefreshView):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def current_user(request):
-	"""Retourne les informations du user courant (protégé par JWT)."""
+	"""Retourne les informations du user courant (protégé par JWT).
+
+	Cette vue supporte l'authentification via header `Authorization: Bearer <token>`
+	ou via cookie `accessToken` posé par `CookieTokenObtainPairView`.
+	"""
 	user = request.user
+
+	# if anonymous, attempt to decode access token from cookie
+	if not getattr(user, 'is_authenticated', False):
+		token = request.COOKIES.get('accessToken')
+		if token:
+			try:
+				backend = TokenBackend(algorithm=settings.SIMPLE_JWT.get('ALGORITHM', 'HS256'))
+				valid_data = backend.decode(token, verify=True)
+				user_id = valid_data.get('user_id')
+				if user_id:
+					try:
+						user = UserModel.objects.get(id=user_id)
+					except UserModel.DoesNotExist:
+						user = None
+			except Exception:
+				user = None
+
+	if not user:
+		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+
 	try:
 		profil = Profil.objects.get(user=user)
 		data = {
@@ -247,3 +280,12 @@ def change_password(request):
 		form = ChangePasswordForm(request.user)
 
 	return render(request, 'users/change_password.html', {'form': form})
+
+
+@api_view(['POST'])
+def api_logout(request):
+	"""Logout API: clear auth cookies set by cookie-based token endpoints."""
+	response = Response({'detail': 'logged out'}, status=200)
+	response.delete_cookie('accessToken', path='/')
+	response.delete_cookie('refreshToken', path='/')
+	return response

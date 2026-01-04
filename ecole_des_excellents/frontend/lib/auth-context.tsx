@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { useToast } from "@/lib/toast-context";
+import fetchWithRefresh from "@/lib/api";
 
 interface User {
   id: number;
@@ -21,7 +22,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<string | null>;
   logout: () => void;
   loading: boolean;
 }
@@ -34,117 +35,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { addToast } = useToast();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      fetchUser(token);
-    } else {
-      setLoading(false);
-    }
+    // Try to fetch current user using cookie-based auth; cookies are sent with credentials
+    fetchUser();
   }, []);
 
-  const fetchUser = async (token: string) => {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
+  const fetchUser = async () => {
     try {
-      const API_BASE =
-        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-      const response = await fetch(`${API_BASE}/api/auth/me/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetchWithRefresh(`${API_BASE}/api/auth/me/`);
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-      } else if (response.status === 401) {
-        // Token expiré, essayer refresh
-        await refreshToken();
       } else {
-        localStorage.clear();
         setUser(null);
-        addToast("error", "Session expirée. Veuillez vous reconnecter.");
+        addToast("error", "Session non authentifiée. Connectez-vous.");
       }
     } catch (error) {
       console.error("Erreur lors de la récupération de l'utilisateur:", error);
       localStorage.clear();
       setUser(null);
-      addToast("error", "Erreur de connexion. Veuillez réessayer.");
+      addToast(
+        "error",
+        "Session expirée ou erreur réseau. Veuillez vous reconnecter."
+      );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const refreshToken = async () => {
-    const refresh = localStorage.getItem("refreshToken");
-    if (!refresh) {
-      localStorage.clear();
-      setUser(null);
-      return;
-    }
-
-    try {
-      const API_BASE =
-        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-      const response = await fetch(`${API_BASE}/api/auth/refresh/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("token", data.access);
-        await fetchUser(data.access);
-      } else {
-        localStorage.clear();
-        setUser(null);
-        addToast("warning", "Session expirée. Veuillez vous reconnecter.");
-      }
-    } catch (error) {
-      console.error("Erreur lors du refresh:", error);
-      localStorage.clear();
-      setUser(null);
-      addToast("error", "Erreur lors du renouvellement de session.");
     }
   };
 
   const login = async (
     username: string,
     password: string
-  ): Promise<boolean> => {
+  ): Promise<string | null> => {
     try {
-      const API_BASE =
-        process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-      const response = await fetch(`${API_BASE}/api/auth/login/`, {
+      const response = await fetch(`${API_BASE}/api/token/cookie/`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
       if (response.ok) {
-        const data = await response.json();
-        const token = data.access;
-        const refresh = data.refresh;
-        localStorage.setItem("token", token);
-        if (refresh) localStorage.setItem("refreshToken", refresh);
-        await fetchUser(token);
-        addToast("success", "Connexion réussie ! Bienvenue.");
-        return true;
+        const payload = await response.json().catch(() => ({}));
+        // server sets HttpOnly cookies; fetch current user
+        await fetchUser();
+        addToast("success", "Connexion réussie.");
+        return payload.redirect || "/";
       }
-      addToast(
-        "error",
-        "Identifiants incorrects. Vérifiez votre nom d'utilisateur et mot de passe."
-      );
-      return false;
+      addToast("error", "Identifiants incorrects.");
+      return null;
     } catch (error) {
       console.error("Erreur lors de la connexion:", error);
-      addToast("error", "Erreur de réseau. Vérifiez votre connexion internet.");
-      return false;
+      addToast("error", "Erreur réseau lors de la connexion.");
+      return null;
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch(`${API_BASE}/api/auth/logout/`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (e) {
+      console.warn("Erreur lors du logout:", e);
+    }
     localStorage.clear();
     setUser(null);
     addToast("info", "Vous avez été déconnecté.");
-    window.location.href = "/";
+    window.location.href = "/login";
   };
 
   return (
