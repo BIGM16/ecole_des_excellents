@@ -4,7 +4,7 @@ from . import views
 app_name = 'users'
 
 urlpatterns = [
-    path('connexion/', views.connexion_utilisateur, name='connexion'),
+    # path('connexion/', views.connexion_utilisateur, name='connexion'),
     path('api/csrf/', views.csrf_token, name='csrf_token'),
     # JWT endpoints
     path('api/token/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

@@ -34,6 +34,10 @@ export function LoginPageClient() {
     return <div className="h-full flex bg-background align-center jusitify-center text-center text-3xl">Chargement...</div>;
   }
 
+  if (!loading && user) {
+    return null;
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <Header />

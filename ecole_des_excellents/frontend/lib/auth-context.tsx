@@ -49,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
       } else {
         setUser(null);
-        addToast("error", "Session non authentifiée. Connectez-vous.");
       }
     } catch (error) {
       console.error("Erreur lors de la récupération de l'utilisateur:", error);
