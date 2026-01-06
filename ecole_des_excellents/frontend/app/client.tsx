@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
 import { HeroSection } from "@/components/hero-section";
 import { AboutSection } from "@/components/about-section";
@@ -15,22 +14,9 @@ export function HomeClient() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && user) {
-      // Rediriger vers le dashboard selon le rôle
-      switch (user.role) {
-        case "admin":
-          router.push("/admin");
-          break;
-        case "encadreur":
-          router.push("/encadreur");
-          break;
-        case "etudiant":
-          router.push("/etudiant");
-          break;
-      }
-    }
-  }, [user, loading, router]);
+  // Note: We don't auto-redirect logged-in users anymore.
+  // Users can access the home page regardless of login status.
+  // They can manually navigate to their dashboard if they want.
 
   if (loading) {
     return (
@@ -40,7 +26,7 @@ export function HomeClient() {
     );
   }
 
-  // Si pas connecté, afficher la page publique
+  // Display public home page for everyone
   return (
     <main className="min-h-screen">
       <Header />

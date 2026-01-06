@@ -1,14 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 
 from core.models import Profil
-from users.forms import UserUpdateForm, ProfilUpdateForm, ChangePasswordForm
+from users.forms import ChangePasswordForm
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -123,32 +122,21 @@ class CookieTokenRefreshView(TokenRefreshView):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def current_user(request):
-	"""Retourne les informations du user courant (protégé par JWT).
-
-	Cette vue supporte l'authentification via header `Authorization: Bearer <token>`
-	ou via cookie `accessToken` posé par `CookieTokenObtainPairView`.
+	"""Return current authenticated user's information.
+	
+	JWT authentication via cookie (HttpOnly) is handled by CookieJWTAuthentication.
+	If user is not authenticated, returns 401.
 	"""
 	user = request.user
 
-	# if anonymous, attempt to decode access token from cookie
-	if not getattr(user, 'is_authenticated', False):
-		token = request.COOKIES.get('accessToken')
-		if token:
-			try:
-				backend = TokenBackend(algorithm=settings.SIMPLE_JWT.get('ALGORITHM', 'HS256'))
-				valid_data = backend.decode(token, verify=True)
-				user_id = valid_data.get('user_id')
-				if user_id:
-					try:
-						user = UserModel.objects.get(id=user_id)
-					except UserModel.DoesNotExist:
-						user = None
-			except Exception:
-				user = None
-
-	if not user:
-		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+	# Check if user is authenticated
+	if not user or not getattr(user, 'is_authenticated', False):
+		return Response(
+			{'detail': 'Authentication credentials were not provided.'},
+			status=status.HTTP_401_UNAUTHORIZED
+		)
 
 	try:
 		profil = Profil.objects.get(user=user)
@@ -172,53 +160,103 @@ def current_user(request):
 	return Response(data)
 
 
-def connexion_utilisateur(request):
-	# Ici on accepte soit username soit email dans le champ "email"
-	if request.method == 'POST':
-		identifier = request.POST.get('email', '').strip()  # email ou username
-		password = request.POST.get('password', '')
+@api_view(['POST'])
+def login_api(request):
+	"""JSON API for login: accepts username/email + password, returns user data and sets JWT cookies."""
+	try:
+		data = request.data
+		identifier = data.get('username', '').strip()  # username or email
+		password = data.get('password', '')
 
-		# Si l'utilisateur existe par email, on récupère son username
+		if not identifier or not password:
+			return Response(
+				{'detail': 'username and password are required'},
+				status=status.HTTP_400_BAD_REQUEST
+			)
+
+		# Try to find user by email if identifier looks like email
 		username = identifier
-		try:
-			user_obj = User.objects.get(email=identifier)
-			username = user_obj.username
-		except User.DoesNotExist:
-			# on garde identifier tel quel (au cas où c'est déjà un username)
-			pass
+		if '@' in identifier:
+			try:
+				user_obj = UserModel.objects.get(email=identifier)
+				username = user_obj.username
+			except UserModel.DoesNotExist:
+				pass
 
+		# Authenticate
 		user = authenticate(request, username=username, password=password)
-		if user is not None:
-			login(request, user)
-			# redirige selon le profil
+		if user is None:
+			return Response(
+				{'detail': 'Invalid credentials'},
+				status=status.HTTP_401_UNAUTHORIZED
+			)
+
+		# Generate JWT tokens (using serializer)
+		serializer = MyTokenObtainPairSerializer(data={'username': username, 'password': password})
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+		tokens = serializer.validated_data
+
+		# Get user profile
+		try:
 			profil = Profil.objects.get(user=user)
+			user_data = {
+				'id': user.id,
+				'username': user.username,
+				'email': user.email,
+				'role': profil.role,
+				'nom_complet': f"{user.first_name} {user.last_name}".strip(),
+				'promotion': profil.promotion,
+				'photo': profil.photo.url if profil.photo else None,
+			}
+		except Profil.DoesNotExist:
+			user_data = {
+				'id': user.id,
+				'username': user.username,
+				'email': user.email,
+				'role': None,
+			}
 
-			# Support AJAX login: retourner JSON
-			if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-				redirect_url = ''
-				if profil.role == 'admin':
-					redirect_url = '/admin/'
-				elif profil.role == 'encadreur':
-					redirect_url = '/encadreur/'
-				elif profil.role == 'etudiant':
-					redirect_url = '/etudiant/'
-				elif profil.role == 'coordinateur':
-					redirect_url = '/coordon/'
-				return JsonResponse({'success': True, 'role': profil.role, 'redirect': redirect_url})
+		response = Response(
+			{
+				'user': user_data,
+				'access': tokens.get('access'),
+				'refresh': tokens.get('refresh'),
+			},
+			status=status.HTTP_200_OK
+		)
 
-			if profil.role == 'admin':
-				return redirect('administrateurs:admin_dashboard')
-			elif profil.role == 'encadreur':
-				return redirect('encadreurs:encadreur_dashboard')
-			elif profil.role == 'etudiant':
-				return redirect('core:portail')
-		else:
-			if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-				return JsonResponse({'success': False, 'error': 'Email/username ou mot de passe incorrect'}, status=400)
-			messages.error(request, "Email/username ou mot de passe incorrect")
+		# Set HttpOnly cookies
+		access = tokens.get('access')
+		refresh = tokens.get('refresh')
+		if access:
+			response.set_cookie(
+				key='accessToken',
+				value=access,
+				max_age=60 * 30,  # 30 minutes
+				httponly=True,
+				secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
+				samesite=getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax'),
+				path='/'
+			)
+		if refresh:
+			response.set_cookie(
+				key='refreshToken',
+				value=refresh,
+				max_age=60 * 60 * 24 * 7,  # 7 days
+				httponly=True,
+				secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
+				samesite=getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax'),
+				path='/'
+			)
 
-	# Pour GET ou échec d'auth, afficher le template
-	return render(request, 'users/connexion.html', {'next': request.GET.get('next', '')})
+		return response
+	except Exception as e:
+		return Response(
+			{'detail': f'Login error: {str(e)}'},
+			status=status.HTTP_500_INTERNAL_SERVER_ERROR
+		)
 
 
 
@@ -233,53 +271,7 @@ def csrf_token(request):
 # return render(request, 'users/connexion.html', {'next': request.GET.get('next', '')})
 
 
-def deconnexion(request):
-	logout(request)
-	return redirect('core:accueil')
 
-
-@login_required(login_url='users:connexion')
-def profil_view(request):
-	profil = request.user.profil
-	user = profil.user
-
-	if request.method == 'POST':
-		user_form = UserUpdateForm(request.POST, instance=user)
-		profil_form = ProfilUpdateForm(request.POST, request.FILES, instance=profil)
-
-		if user_form.is_valid() and profil_form.is_valid():
-			user_form.save()
-			profil_form.save()
-			messages.success(request, "Les informations de l'étudiant ont été mises à jour.")
-			return redirect('users:profil')
-		else:
-			messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
-	else:
-		user_form = UserUpdateForm(instance=user)
-		profil_form = ProfilUpdateForm(instance=profil)
-
-	return render(request, 'users/profil.html', {
-		'user_form': user_form,
-		'profil_form': profil_form,
-		'profil': profil
-	})
-
-
-@login_required(login_url='users:connexion')
-def change_password(request):
-	if request.method == 'POST':
-		form = ChangePasswordForm(request.user, request.POST)
-		if form.is_valid():
-			user = form.save()
-			update_session_auth_hash(request, user)  # évite la déconnexion automatique
-			messages.success(request, "Votre mot de passe a été modifié avec succès.")
-			return redirect('users:profil')  # ou redirige où tu veux
-		else:
-			messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
-	else:
-		form = ChangePasswordForm(request.user)
-
-	return render(request, 'users/change_password.html', {'form': form})
 
 
 @api_view(['POST'])
@@ -289,3 +281,99 @@ def api_logout(request):
 	response.delete_cookie('accessToken', path='/')
 	response.delete_cookie('refreshToken', path='/')
 	return response
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def profil_api(request):
+	"""Get or update user profile — JSON API, authenticated users only."""
+	user = request.user
+	try:
+		profil = Profil.objects.get(user=user)
+	except Profil.DoesNotExist:
+		return Response({'detail': 'Profil not found'}, status=status.HTTP_404_NOT_FOUND)
+
+	if request.method == 'GET':
+		# Return user profile data
+		data = {
+			'id': user.id,
+			'username': user.username,
+			'email': user.email,
+			'first_name': user.first_name,
+			'last_name': user.last_name,
+			'role': profil.role,
+			'promotion': profil.promotion,
+			'photo': profil.photo.url if profil.photo else None,
+		}
+		return Response(data)
+
+	elif request.method == 'POST':
+		# Update profile
+		data = request.data
+
+		# Update user fields
+		if 'first_name' in data:
+			user.first_name = data['first_name']
+		if 'last_name' in data:
+			user.last_name = data['last_name']
+		if 'email' in data:
+			user.email = data['email']
+		user.save()
+
+		# Update profil fields
+		if 'promotion' in data:
+			profil.promotion = data['promotion']
+		if 'photo' in request.FILES:
+			profil.photo = request.FILES['photo']
+		profil.save()
+
+		result_data = {
+			'id': user.id,
+			'username': user.username,
+			'email': user.email,
+			'first_name': user.first_name,
+			'last_name': user.last_name,
+			'role': profil.role,
+			'promotion': profil.promotion,
+			'photo': profil.photo.url if profil.photo else None,
+		}
+		return Response({'message': 'Profil updated', 'profil': result_data})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password_api(request):
+	"""Change password API — JSON only, authenticated users."""
+	user = request.user
+	data = request.data
+
+	old_password = data.get('old_password', '')
+	new_password = data.get('new_password', '')
+	confirm_password = data.get('confirm_password', '')
+
+	if not old_password or not new_password or not confirm_password:
+		return Response(
+			{'detail': 'old_password, new_password, and confirm_password are required'},
+			status=status.HTTP_400_BAD_REQUEST
+		)
+
+	# Check old password
+	if not user.check_password(old_password):
+		return Response(
+			{'detail': 'Old password is incorrect'},
+			status=status.HTTP_400_BAD_REQUEST
+		)
+
+	# Check if new passwords match
+	if new_password != confirm_password:
+		return Response(
+			{'detail': 'New passwords do not match'},
+			status=status.HTTP_400_BAD_REQUEST
+		)
+
+	# Update password
+	user.set_password(new_password)
+	user.save()
+	update_session_auth_hash(request, user)
+
+	return Response({'message': 'Password changed successfully'})

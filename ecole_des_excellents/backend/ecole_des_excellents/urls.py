@@ -9,18 +9,16 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('core.urls')),
-    path('', include('users.urls')),
-    path('', include('administrateurs.urls')),
-    path('', include('etudiants.urls')),
-    path('', include('encadreurs.urls')),
-    path('api/', include('encadreurs.urls')),
-    path('coordinateurs/', include('coordinateurs.urls')),
-    path('', include('cours.urls')),
-    path('', include('notifications.urls')),
+    path('api/core/', include('core.urls')),
+    path('api/administrateurs/', include('administrateurs.urls')),
+    path('api/etudiants/', include('etudiants.urls')),
+    path('api/encadreurs/', include('encadreurs.urls')),
+    path('api/coordinateurs/', include('coordinateurs.urls')),
+    path('api/cours/', include('cours.urls')),
+    path('api/notifications/', include('notifications.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
-    path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # mount users app at /api/ so internal paths like /api/token/, /api/auth/me/ match frontend
+    path('api/', include('users.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

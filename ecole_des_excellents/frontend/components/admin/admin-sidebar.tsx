@@ -1,9 +1,10 @@
 "use client"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Users, BookOpen, UserCog, LogOut, X, Award, User } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 
 const navigationItems = [
   {
@@ -40,6 +41,13 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { logout } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/login")yj
+  }
 
   return (
     <>
@@ -111,12 +119,13 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 <span className="font-medium">Mon Profil</span>
               </div>
             </Link>
-            <Link href="/login">
-              <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-destructive hover:bg-destructive/10 transition-all duration-200">
-                <LogOut className="h-5 w-5" />
-                <span className="font-medium">Déconnexion</span>
-              </div>
-            </Link>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-destructive hover:bg-destructive/10 transition-all duration-200"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="font-medium">Déconnexion</span>
+            </button>
           </div>
         </div>
       </aside>
