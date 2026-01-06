@@ -46,7 +46,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
   const handleLogout = async () => {
     await logout()
-    router.push("/login")yj
+    router.push("/login")
   }
 
   return (
