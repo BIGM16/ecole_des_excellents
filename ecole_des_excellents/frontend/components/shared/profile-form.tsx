@@ -87,7 +87,7 @@ export function ProfileForm({ role }: ProfileFormProps) {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Photo de Profil</CardTitle>
-            <CardDescription>Cliquez sur l'avatar pour changer votre photo</CardDescription>
+            <CardDescription>Cliquez sur l&apos;avatar pour changer votre photo</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <div className="relative group">

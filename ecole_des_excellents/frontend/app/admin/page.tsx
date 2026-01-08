@@ -16,7 +16,6 @@ import {
 import { Calendar, Users } from "lucide-react";
 import { AdminHoraireWidget } from "@/components/admin/admin-horaire-widget";
 import { AdminCoordonWidget } from "@/components/admin/admin-coordon-widget";
-import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
 export default function AdminDashboardPage() {
@@ -43,7 +42,7 @@ export default function AdminDashboardPage() {
           Tableau de Bord
         </h1>
         <p className="text-muted-foreground">
-          Vue d'ensemble de l'École des Excellents
+          Vue d&apos;ensemble de l&apos;École des Excellents
         </p>
       </div>
 

@@ -1,71 +1,95 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CoursDetailsModal } from "./cours-details-modal"
-import { Search, MoreVertical, Edit, Trash2, Users, Clock, Eye } from "lucide-react"
+import { useEffect, useState } from "react";
+import fetchWithRefresh from "@/lib/api";
+import { useToast } from "@/lib/toast-context";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CoursDetailsModal } from "./cours-details-modal";
+import {
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Users,
+  Clock,
+  Eye,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const mockCours = [
-  {
-    id: 1,
-    titre: "Anatomie Générale",
-    code: "MED-301",
-    niveau: "3ème année",
-    encadreur: "Pr. Sarah Mbuyi",
-    etudiants: 48,
-    heures: 60,
-    status: "En cours",
-  },
-  {
-    id: 2,
-    titre: "Cardiologie Clinique",
-    code: "MED-501",
-    niveau: "5ème année",
-    encadreur: "Dr. David Kalala",
-    etudiants: 35,
-    heures: 45,
-    status: "En cours",
-  },
-  {
-    id: 3,
-    titre: "Pédiatrie Pratique",
-    code: "MED-402",
-    niveau: "4ème année",
-    encadreur: "Dr. Grace Nsimba",
-    etudiants: 42,
-    heures: 50,
-    status: "En cours",
-  },
-]
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export function CoursList() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterNiveau, setFilterNiveau] = useState("all")
-  const [selectedCours, setSelectedCours] = useState<(typeof mockCours)[0] | null>(null)
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterNiveau, setFilterNiveau] = useState("all");
+  const [cours, setCours] = useState<any[]>([]);
+  const [selectedCours, setSelectedCours] = useState<any | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { addToast } = useToast();
 
-  const filteredCours = mockCours.filter((cours) => {
+  const loadCours = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchWithRefresh(`${API_BASE}/api/administrateurs/cours/search/`);
+      if (res.ok) {
+        const data = await res.json();
+        setCours(Array.isArray(data.results) ? data.results : []);
+      } else {
+        addToast("error", "Erreur lors du chargement des cours");
+      }
+    } catch (e) {
+      console.error(e);
+      addToast("error", "Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCours();
+  }, []);
+
+  const handleViewDetails = (c: any) => {
+    setSelectedCours(c);
+    setIsDetailsOpen(true);
+  };
+
+  const filteredCours = cours.filter((c) => {
     const matchesSearch =
-      cours.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cours.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cours.encadreur.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesNiveau = filterNiveau === "all" || cours.niveau === filterNiveau
-    return matchesSearch && matchesNiveau
-  })
-
-  const handleViewDetails = (cours: (typeof mockCours)[0]) => {
-    setSelectedCours(cours)
-    setIsDetailsOpen(true)
-  }
+      (c.titre || "")
+        .toString()
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (c.code || "")
+        .toString()
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (c.encadreur || "")
+        .toString()
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+    const matchesNiveau =
+      filterNiveau === "all" || (c.niveau || "") === filterNiveau;
+    return matchesSearch && matchesNiveau;
+  });
 
   return (
     <div className="space-y-4">
-      {/* Search and Filter Bar */}
       <Card className="p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
@@ -91,59 +115,83 @@ export function CoursList() {
         </div>
       </Card>
 
-      {/* Cours Table */}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50 border-b border-border">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Cours</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Code</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Niveau</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Encadreur</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Étudiants</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Heures</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Actions</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                  Cours
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                  Code
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                  Niveau
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                  Encadreur
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                  Étudiants
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                  Heures
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredCours.map((cours) => (
+              {filteredCours.map((c) => (
                 <tr
-                  key={cours.id}
+                  key={c.id}
                   className="hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={() => handleViewDetails(cours)}
+                  onClick={() => handleViewDetails(c)}
                 >
                   <td className="px-6 py-4">
-                    <div className="font-medium text-foreground">{cours.titre}</div>
+                    <div className="font-medium text-foreground">{c.titre}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <Badge variant="outline">{cours.code}</Badge>
+                    <Badge variant="outline">{c.code}</Badge>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-muted-foreground">{cours.niveau}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {c.niveau}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-muted-foreground">{cours.encadreur}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {c.encadreur}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-foreground">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      {cours.etudiants}
+                      {c.etudiants ?? "-"}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-foreground">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      {cours.heures}h
+                      {c.heures ?? "-"}h
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <Badge className="bg-primary/10 text-primary">{cours.status}</Badge>
+                    <Badge className="bg-primary/10 text-primary">
+                      {c.status ?? "-"}
+                    </Badge>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button variant="ghost" size="icon">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
@@ -151,8 +199,8 @@ export function CoursList() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation()
-                            handleViewDetails(cours)
+                            e.stopPropagation();
+                            handleViewDetails(c);
                           }}
                         >
                           <Eye className="h-4 w-4 mr-2" />
@@ -162,7 +210,10 @@ export function CoursList() {
                           <Edit className="h-4 w-4 mr-2" />
                           Modifier
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Supprimer
                         </DropdownMenuItem>
@@ -171,20 +222,40 @@ export function CoursList() {
                   </td>
                 </tr>
               ))}
+
+              {loading && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="p-4 text-center text-sm text-muted-foreground"
+                  >
+                    Chargement...
+                  </td>
+                </tr>
+              )}
+              {!loading && filteredCours.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="p-4 text-center text-sm text-muted-foreground"
+                  >
+                    Aucun cours trouvé
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </Card>
 
-      {/* Modal de détails */}
       <CoursDetailsModal
         isOpen={isDetailsOpen}
         onClose={() => {
-          setIsDetailsOpen(false)
-          setSelectedCours(null)
+          setIsDetailsOpen(false);
+          setSelectedCours(null);
         }}
         cours={selectedCours}
       />
     </div>
-  )
+  );
 }

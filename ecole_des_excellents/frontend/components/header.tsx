@@ -49,8 +49,7 @@ export function Header() {
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
-          {/* Logo */}
-          <a href="#" className="flex items-center gap-3 group">
+          <a href="/" className="flex items-center gap-3 group">
             <div className="relative">
               <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
                 <span className="text-2xl font-bold text-primary-foreground font-serif">
@@ -73,7 +72,6 @@ export function Header() {
             </div>
           </a>
 
-          {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
             {navItems.map((item) => (
               <a
@@ -85,9 +83,17 @@ export function Header() {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
+            {user?.role === "admin" && (
+              <a
+                href="/admin"
+                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors relative group"
+              >
+                Admin
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full" />
+              </a>
+            )}
           </nav>
 
-          {/* Actions */}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -145,7 +151,6 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="lg:hidden py-4 border-t border-border animate-in slide-in-from-top-2">
             <nav className="flex flex-col gap-4">
@@ -159,6 +164,14 @@ export function Header() {
                   {item.label}
                 </a>
               ))}
+              {user?.role === "admin" && (
+                <a
+                  href="/admin"
+                  className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors py-2"
+                >
+                  Admin
+                </a>
+              )}
               {user ? (
                 <>
                   <Button
@@ -173,7 +186,7 @@ export function Header() {
                     onClick={handleLogout}
                     className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 mt-2"
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
+                    Déconnexion
                   </Button>
                 </>
               ) : (

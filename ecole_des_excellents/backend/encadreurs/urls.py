@@ -1,11 +1,9 @@
 from django.urls import path
-from core import views as core_views
-from .views import encadreurs_list
+from . import views
 
-app_name = 'encadreurs'
+app_name = "encadreurs"
 
 urlpatterns = [
-    path('encadreur_dashboard/', core_views.encadreur_dashboard, name='encadreur_dashboard'),
-    path('encadreurs/', encadreurs_list, name='encadreurs_list'),
+    path("", views.encadreurs_list_api, name="encadreurs_list_api"),
+    path("<int:id>/", views.encadreur_detail_api, name="encadreur_detail_api"),
 ]
-

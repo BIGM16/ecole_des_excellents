@@ -188,3 +188,5 @@ export function CoursModal({ isOpen, onClose, cours }: CoursModalProps) {
     </Dialog>
   )
 }
+
+

@@ -1,11 +1,10 @@
 from django.urls import path
-from administrateurs import views as admin_views
+from . import views
 
-app_name = 'etudiants'
+app_name = "etudiants"
 
 urlpatterns = [
-    path('etudiant/search/', admin_views.search_etudiant, name='search_etudiant'),
-    path('etudiant/<int:id>/edit/', admin_views.edit_etudiant, name='edit_etudiant'),
-    path('etudiant/<int:id>/delete/', admin_views.delete_etudiant, name='delete_etudiant'),
+    path("", views.etudiants_list_api, name="etudiants_list_api"),
+    path("search/", views.etudiants_list_api, name="etudiants_search_api"),  # same handler supports q & promotion
+    path("<int:id>/", views.etudiant_detail_api, name="etudiant_detail_api"),
 ]
-
