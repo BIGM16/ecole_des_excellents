@@ -37,7 +37,7 @@ export function EtudiantsList() {
     setLoading(true);
     try {
       const res = await fetchWithRefresh(
-        `${API_BASE}/api/administrateurs/etudiant/search/`
+        `${API_BASE}/api/etudiants/`
       );
       if (res.ok) {
         const data = await res.json();

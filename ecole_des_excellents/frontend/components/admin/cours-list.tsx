@@ -45,7 +45,7 @@ export function CoursList() {
   const loadCours = async () => {
     setLoading(true);
     try {
-      const res = await fetchWithRefresh(`${API_BASE}/api/administrateurs/cours/search/`);
+      const res = await fetchWithRefresh(`${API_BASE}/api/cours/`);
       if (res.ok) {
         const data = await res.json();
         setCours(Array.isArray(data.results) ? data.results : []);

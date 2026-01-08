@@ -1,164 +1,82 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from core.decorators import role_required
-from core.models import Cours, Document, DocumentFile
-from cours.forms import CoursForm, DocumentForm
-from django.db import transaction
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
+from core.models import Cours
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def cours_list_api(request):
+    # GET: support q, promotion, matiere filters (same behaviour as ancien search_cours)
+    if request.method == "GET":
+        promotion = request.GET.get("promotion", "all")
+        matiere = request.GET.get("matiere", "").strip()
+        q = request.GET.get("q", "").strip()
+        qs = Cours.objects.all().order_by("-date_creation")
+        if promotion and promotion != "all":
+            qs = qs.filter(promotion=promotion)
+        if matiere and matiere.lower() not in ["all", ""]:
+            qs = qs.filter(Q(titre__icontains=matiere) | Q(description__icontains=matiere))
+        if q:
+            qs = qs.filter(Q(titre__icontains=q) | Q(description__icontains=q))
+        results = []
+        for c in qs:
+            encadreur = None
+            if c.encadreur:
+                encadreur = c.encadreur.user.get_full_name() or c.encadreur.user.username
+            results.append({
+                "id": c.id,
+                "titre": c.titre,
+                "promotion": c.get_promotion_display() if hasattr(c, "get_promotion_display") else c.promotion,
+                "encadreur": encadreur,
+                "documents_count": c.documents.count() if hasattr(c, "documents") else 0,
+            })
+        return Response({"results": results})
+
+    # POST: create cours (admin only)
+    profil = getattr(request.user, "profil", None)
+    if not profil or profil.role != "admin":
+        return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data
+    titre = data.get("titre")
+    if not titre:
+        return Response({"detail": "titre requis"}, status=status.HTTP_400_BAD_REQUEST)
+    c = Cours.objects.create(titre=titre, description=data.get("description", ""), promotion=data.get("promotion", None))
+    return Response({"id": c.id, "titre": c.titre}, status=status.HTTP_201_CREATED)
 
 
-@login_required(login_url='users:connexion')
-@role_required(allowed_roles=['admin'])
-def edit_cours(request, cours_id):
-	cours = get_object_or_404(Cours, id=cours_id)
+@api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
+def cours_detail_api(request, id):
+    c = get_object_or_404(Cours, id=id)
+    if request.method == "GET":
+        encadreur = c.encadreur.user.get_full_name() if c.encadreur else None
+        data = {
+            "id": c.id,
+            "titre": c.titre,
+            "description": c.description,
+            "promotion": c.get_promotion_display() if hasattr(c, "get_promotion_display") else c.promotion,
+            "encadreur": encadreur,
+        }
+        return Response(data)
 
-	if request.method == 'POST':
-		form = CoursForm(request.POST, request.FILES, instance=cours)
-		if form.is_valid():
-			form.save()
-			messages.success(request, 'Cours mis à jour.')
-			return redirect('administrateurs:admin_dashboard')
-		else:
-			messages.error(request, 'Veuillez corriger les erreurs du formulaire.')
-	else:
-		form = CoursForm(instance=cours)
+    profil = getattr(request.user, "profil", None)
+    if not profil or profil.role != "admin":
+        return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
-	documents = cours.documents.all().order_by('-date_ajout')
+    if request.method == "PUT":
+        data = request.data
+        c.titre = data.get("titre", c.titre)
+        c.description = data.get("description", c.description)
+        c.save()
+        return Response({"detail": "updated"})
 
-	# DocumentForm pour la partie d'ajout (AJAX) — on envoie via JS
-	doc_form = DocumentForm()
-
-	return render(request, 'cours/edit_cours.html', {
-		'cours': cours,
-		'form': form,
-		'documents': documents,
-		'doc_form': doc_form,
-	})
-
-
-@login_required(login_url='users:connexion')
-@role_required(allowed_roles=['encadreur', 'admin'])
-def ajouter_document(request, cours_id):
-	if request.method != 'POST' or request.headers.get('X-Requested-With') != 'XMLHttpRequest':
-		return JsonResponse({'success': False, 'error': 'Requête invalide'}, status=400)
-
-	cours = get_object_or_404(Cours, id=cours_id)
-	form = DocumentForm(request.POST)
-	fichiers = request.FILES.getlist('fichiers[]')
-
-	if not fichiers:
-		return JsonResponse({'success': False, 'error': 'Aucun fichier reçu'})
-
-	if not form.is_valid():
-		return JsonResponse({'success': False, 'error': 'Formulaire invalide', 'errors': form.errors}, status=400)
-
-	try:
-		with transaction.atomic():
-			doc = form.save(commit=False)
-			doc.cours = cours
-			doc.save()
-			uploaded = []
-			for f in fichiers:
-				if f.size > 20 * 1024 * 1024:
-					raise ValueError(f'Le fichier {f.name} est trop volumineux')
-				ext = f.name.split('.')[-1].lower()
-				if ext not in ['pdf', 'doc', 'docx', 'ppt', 'pptx']:
-					raise ValueError(f'Type de fichier non autorisé: {ext}')
-
-				df = DocumentFile.objects.create(document=doc, fichier=f, nom=getattr(f, 'name', None))
-				uploaded.append({'name': df.nom or df.fichier.name, 'id': df.id})
-
-		return JsonResponse({'success': True, 'document': {'id': doc.id, 'titre': doc.titre, 'categorie': doc.categorie}, 'files': uploaded})
-	except ValueError as e:
-		return JsonResponse({'success': False, 'error': str(e)}, status=400)
-	except Exception as e:
-		return JsonResponse({'success': False, 'error': 'Erreur serveur'}, status=500)
-
-
-@login_required(login_url='users:connexion')
-@role_required(allowed_roles=['admin'])
-def delete_cours(request, cours_id):
-	cours = get_object_or_404(Cours, id=cours_id)
-	cours.delete()
-	messages.success(request, 'Cours supprimé.')
-	return redirect('administrateurs:admin_dashboard')
-
-
-@login_required(login_url='users:connexion')
-@role_required(allowed_roles=['admin'])
-def create_cours_ajax(request):
-	if request.method != 'POST' or request.headers.get('X-Requested-With') != 'XMLHttpRequest':
-		return JsonResponse({'success': False, 'error': 'Requête invalide'}, status=400)
-
-	form = CoursForm(request.POST, request.FILES)
-	if not form.is_valid():
-		return JsonResponse({'success': False, 'error': 'Formulaire invalide', 'errors': form.errors}, status=400)
-
-	try:
-		c = form.save()
-		encadreur = None
-		if c.encadreur:
-			encadreur = c.encadreur.user.get_full_name() or c.encadreur.user.username
-
-		return JsonResponse({
-			'success': True,
-			'cours': {
-				'id': c.id,
-				'titre': c.titre,
-				'promotion': c.get_promotion_display(),
-				'encadreur': encadreur,
-				'documents_count': c.documents.count(),
-				'edit_url': f"/cours/{c.id}/edit/",
-				'delete_url': f"/cours/{c.id}/delete/",
-			}
-		})
-	except Exception as e:
-		return JsonResponse({'success': False, 'error': 'Erreur serveur lors de la création'}, status=500)
-
-
-@login_required(login_url='users:connexion')
-@role_required(allowed_roles=['encadreur', 'admin'])
-def ajouter_fichiers_document(request, document_id):
-	if request.method != 'POST' or request.headers.get('X-Requested-With') != 'XMLHttpRequest':
-		return JsonResponse({'success': False, 'error': 'Requête invalide'}, status=400)
-
-	doc = get_object_or_404(Document, id=document_id)
-	fichiers = request.FILES.getlist('fichiers[]')
-
-	if not fichiers:
-		return JsonResponse({'success': False, 'error': 'Aucun fichier reçu'})
-
-	try:
-		created = []
-		with transaction.atomic():
-			for f in fichiers:
-				if f.size > 20 * 1024 * 1024:
-					raise ValueError(f'Le fichier {f.name} est trop volumineux')
-				ext = f.name.split('.')[-1].lower()
-				if ext not in ['pdf', 'doc', 'docx', 'ppt', 'pptx']:
-					raise ValueError(f'Type de fichier non autorisé: {ext}')
-
-				df = DocumentFile.objects.create(document=doc, fichier=f, nom=getattr(f, 'name', None))
-				created.append({'id': df.id, 'name': df.nom or df.fichier.name, 'url': df.fichier.url})
-
-		return JsonResponse({'success': True, 'files': created, 'document_id': doc.id})
-	except ValueError as e:
-		return JsonResponse({'success': False, 'error': str(e)}, status=400)
-	except Exception as e:
-		return JsonResponse({'success': False, 'error': 'Erreur serveur'}, status=500)
-
-
-@login_required(login_url='users:connexion')
-@role_required(allowed_roles=['encadreur', 'admin'])
-def supprimer_document_file(request, file_id):
-	if request.method not in ['POST', 'DELETE'] or request.headers.get('X-Requested-With') != 'XMLHttpRequest':
-		return JsonResponse({'success': False, 'error': 'Requête invalide'}, status=400)
-
-	df = get_object_or_404(DocumentFile, id=file_id)
-	try:
-		df.fichier.delete(save=False)
-		df.delete()
-		return JsonResponse({'success': True, 'file_id': file_id})
-	except Exception as e:
-		return JsonResponse({'success': False, 'error': 'Impossible de supprimer le fichier'}, status=500)
+    if request.method == "DELETE":
+        c.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
