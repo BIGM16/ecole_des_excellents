@@ -22,7 +22,7 @@ urlpatterns = [
     path('auth/me/', views.current_user, name='current_user'),
     path('auth/logout/', views.api_logout, name='api_logout'),
     
-    # User profile endpoints (JSON API)
-    path('profil/', views.profil_api, name='profil_api'),
+    # User profile endpoints (JSON API) — use cookie-capable view `api_profile`
+    path('profil/', views.api_profile, name='profil_api'),
     path('profil/change_password/', views.change_password_api, name='change_password_api'),
 ]

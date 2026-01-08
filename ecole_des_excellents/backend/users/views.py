@@ -283,6 +283,86 @@ def api_logout(request):
 	return response
 
 
+@api_view(['GET', 'PUT'])
+def api_profile(request):
+	"""GET: retourne les informations du profil courant.
+	PUT: met à jour `first_name`, `last_name`, `email`, `promotion` et `photo` (multipart/form-data supporté).
+	Authentification via header Bearer ou cookie `accessToken`.
+	"""
+	# reuse current_user resolution logic
+	user = request.user
+	if not getattr(user, 'is_authenticated', False):
+		token = request.COOKIES.get('accessToken')
+		if token:
+			try:
+				backend = TokenBackend(algorithm=settings.SIMPLE_JWT.get('ALGORITHM', 'HS256'))
+				valid_data = backend.decode(token, verify=True)
+				user_id = valid_data.get('user_id')
+				if user_id:
+					try:
+						user = UserModel.objects.get(id=user_id)
+					except UserModel.DoesNotExist:
+						user = None
+			except Exception:
+				user = None
+
+	if not user:
+		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+	try:
+		profil = Profil.objects.get(user=user)
+	except Profil.DoesNotExist:
+		return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+	if request.method == 'GET':
+		data = {
+			'id': user.id,
+			'username': user.username,
+			'email': user.email,
+			'first_name': user.first_name,
+			'last_name': user.last_name,
+			'role': profil.role,
+			'nom_complet': f"{user.first_name} {user.last_name}".strip(),
+			'promotion': profil.promotion,
+			'photo': profil.photo.url if profil.photo else None,
+		}
+		return Response(data)
+
+	# PUT: update
+	# accept multipart/form-data or application/json
+	data = request.data
+	changed = False
+	first = data.get('first_name')
+	last = data.get('last_name')
+	email = data.get('email')
+	promotion = data.get('promotion')
+	photo = None
+	if hasattr(request, 'FILES'):
+		photo = request.FILES.get('photo')
+
+	if first is not None:
+		user.first_name = first
+		changed = True
+	if last is not None:
+		user.last_name = last
+		changed = True
+	if email is not None:
+		user.email = email
+		changed = True
+	if promotion is not None:
+		profil.promotion = promotion
+		changed = True
+	if photo is not None:
+		profil.photo = photo
+		changed = True
+
+	if changed:
+		user.save()
+		profil.save()
+
+	return Response({'detail': 'updated'})
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def profil_api(request):

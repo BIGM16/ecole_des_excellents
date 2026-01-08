@@ -81,7 +81,7 @@ export function LoginForm() {
               Connexion
             </h2>
             <p className="text-sm text-muted-foreground">
-              Accédez à votre espace pour continuer vers l'excellence
+              Accédez à votre espace pour continuer vers l&apos;excellence
             </p>
           </div>
 
@@ -97,7 +97,7 @@ export function LoginForm() {
                 htmlFor="username"
                 className="text-sm font-medium text-foreground"
               >
-                Nom d'utilisateur
+                Nom d&apos;utilisateur
               </Label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -164,7 +164,7 @@ export function LoginForm() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-base shadow-lg shadow-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 animate-in fade-in zoom-in-95 duration-500 delay-600"
+              className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-base shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 animate-in fade-in zoom-in-95 duration-500 delay-600"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -195,7 +195,7 @@ export function LoginForm() {
           {/* Info message */}
           <div className="text-center space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-800">
             <p className="text-sm text-muted-foreground">
-              Vous n'avez pas encore de compte ?
+              Vous n&apos;avez pas encore de compte ?
             </p>
             <a
               href="#"
@@ -210,8 +210,7 @@ export function LoginForm() {
         <div className="mt-8 text-center animate-in fade-in slide-in-from-bottom-2 duration-700 delay-1000">
           <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary/10 border border-primary/20">
             <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            <p className="text-sm font-medium text-foreground italic">
-              "L'excellence n'est pas une destination, c'est un voyage"
+            <p className="text-sm font-medium text-foreground italic">&ldquo;L&apos;excellence n&apos;est pas une destination, c&apos;est un voyage&rdquo;
             </p>
           </div>
         </div>
