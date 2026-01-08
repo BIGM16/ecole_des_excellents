@@ -103,14 +103,24 @@ export function Header() {
             </Button>
 
             {user ? (
-              <Button
-                onClick={handleLogout}
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
+              <>
+                <Button
+                  asChild
+                  className="hidden md:flex mr-2 bg-transparent hover:bg-transparent"
+                >
+                  <a href="/profile" className="text-sm">
+                    Profil
+                  </a>
+                </Button>
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </>
             ) : (
               <Button
                 asChild
@@ -150,13 +160,22 @@ export function Header() {
                 </a>
               ))}
               {user ? (
-                <Button
-                  onClick={handleLogout}
-                  className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 mt-2"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
-                </Button>
+                <>
+                  <Button
+                    asChild
+                    className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors py-2"
+                  >
+                    <a href="/profile" className="text-sm">
+                      Profil
+                    </a>
+                  </Button>
+                  <Button
+                    onClick={handleLogout}
+                    className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 mt-2"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                  </Button>
+                </>
               ) : (
                 <Button
                   asChild
