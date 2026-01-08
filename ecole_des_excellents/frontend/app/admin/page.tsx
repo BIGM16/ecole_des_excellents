@@ -16,6 +16,8 @@ import {
 import { Calendar, Users } from "lucide-react";
 import { AdminHoraireWidget } from "@/components/admin/admin-horaire-widget";
 import { AdminCoordonWidget } from "@/components/admin/admin-coordon-widget";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 
 export default function AdminDashboardPage() {
   const { user, loading } = useAuth();
@@ -36,7 +38,6 @@ export default function AdminDashboardPage() {
   if (!user || user.role !== "admin") return null;
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Header */}
       <div>
         <h1 className="text-4xl font-bold text-foreground mb-2 font-serif">
           Tableau de Bord
@@ -92,6 +93,8 @@ export default function AdminDashboardPage() {
 
       {/* Recent Activities */}
       <RecentActivities />
+
+      <Footer />
     </div>
   );
 }
